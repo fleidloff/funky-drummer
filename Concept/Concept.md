@@ -14,4 +14,4 @@ Funky Drummer
 * there is a button "auto-fill" to enable and disable automatic fills
 * "auto-feel" button to automatically control the feel slider  (or not)
 * we have a tempo knob as well as a swing knob to adjust the tempo and swing of the groove
-* The groove is always in 4/4, entered manually in a very simple form. Fills, variations, ghost notes and so on are generated on the fly by the drummer
+* The groove is always in 4/4, entered manually in a very simple form. Fills, variations, ghost notes and so on are generated on the fly by the drummeraw
