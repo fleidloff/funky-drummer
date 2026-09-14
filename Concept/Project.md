@@ -46,6 +46,9 @@ performance on top of it is generated fresh.
   4 bars, so phrases build and settle.
 - Humanizes micro-timing so it does not sound quantized.
 - Always 4/4.
+- comes up with Motifs that the Player can react to
+- possibly call response: play 1-2 Bar Motifs, 2 Bars almost nothing, giving room for response
+- the drummer changes the audio stream with a pipeline of different audio modules (variation, fill, ghosts, velocity, etc)
 
 ### The kit
 
