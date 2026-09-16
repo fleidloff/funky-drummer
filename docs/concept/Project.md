@@ -75,7 +75,9 @@ hole. There is no per-instrument volume.
 
 A skeuomorphic analog drum machine: brushed metal panel, physical knobs, glowing
 backlit buttons, warm amber on grey. Portrait layout, designed for a phone held in one
-hand while the other hand is on the instrument. See `app.jpg`.
+hand while the other hand is on the instrument. **`app2.png` is the reference**;
+`app.jpg` is the earlier one, kept because its brighter metal is what light mode
+follows.
 
 ## Groove library
 

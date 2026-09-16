@@ -11,11 +11,19 @@ const gapClass: Record<Space, string> = {
   8: 'gap-8',
 }
 
+const alignClass = {
+  start: 'items-start',
+  center: 'items-center',
+  end: 'items-end',
+  stretch: 'items-stretch',
+}
+
 type StackProps = {
   gap: Space
+  align?: keyof typeof alignClass
   children: ReactNode
 }
 
-export function Stack({ gap, children }: StackProps) {
-  return <div className={`flex flex-col ${gapClass[gap]}`}>{children}</div>
+export function Stack({ gap, align = 'stretch', children }: StackProps) {
+  return <div className={`flex flex-col ${gapClass[gap]} ${alignClass[align]}`}>{children}</div>
 }

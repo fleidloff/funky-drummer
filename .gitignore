@@ -48,3 +48,4 @@ next-env.d.ts
 
 # transient zone fixtures written by eslint.config.test.ts
 src/features/zonefixture-*
+.shots/*.png

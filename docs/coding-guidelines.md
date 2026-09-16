@@ -59,6 +59,32 @@ where `TempoCard` composes `Card` rather than replacing it.
 
 *human-checked* — a linter cannot tell a generic noun from a domain one.
 
+**No file under `src/components/` or `src/features/` names a colour.** The look
+is a vocabulary of named surfaces in `src/app/globals.css` — `surface-metal`,
+`surface-well`, `lamp-amber`, `engraved`, `etched` and the rest — and a component
+applies one of those plus ordinary Tailwind utilities for size and spacing. Four
+things are forbidden outright: a palette utility (`bg-zinc-800`), a literal
+colour (`#3a3a3a`), a `dark:` variant, and reading `prefers-color-scheme`. The
+scheme is the operating system's and the swap lives in one file, which is what
+makes "light differs from dark in the metal and nothing else" a fact rather than
+an intention.
+
+Motivated by the eighteen primitives V3 added at once
+([ADR 0004](adr/0004-the-look-is-a-named-surface-vocabulary.md)): the same look
+written eighteen times is the same look drifting eighteen ways.
+
+*guarded by a structural test* — `src/app/theme.test.ts` reads `globals.css` and
+the whole UI tree from disk and names the file and the offending token.
+
+**A design-system control takes its words as props and its value already
+formatted.** `Knob` and `Fader` take `label`, `valueLabel`, `scaleStart` and
+`scaleEnd` as strings; the feature decides that 96 renders as `96 BPM`. Notation
+is data and belongs beside the state it describes
+([ADR 0003](adr/0003-user-facing-text-lives-in-snippets.md)), and a primitive
+that formats a value has learned what the value means.
+
+*human-checked* — motivated by `src/components/controls/Knob.tsx`.
+
 **Nothing under `src/components/` may import from `src/features/`.** The
 dependency runs one way only. If a primitive seems to need a feature's type, the
 type is in the wrong place — lift it to `src/lib/`, or pass it in as a prop.

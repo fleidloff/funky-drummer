@@ -68,10 +68,17 @@ second graph the directories do not show: which of the slice's concerns may
 reach which.
 
 **This section is empty, and that is correct for now.** A slice with two or
-three concern folders does not need a map; a reader holds it in their head. Draw
+three concern folders does not need a map; a reader holds it in their head.
+Draw
 one when a slice has grown enough concerns that the reaching between them has
 stopped being obvious — and until then, importing a sibling concern folder
 directly is correct rather than a violation waiting for a rule.
+
+V3 added the first slice, `src/features/panel/`, and it has exactly three
+concern folders: `components/` — grouped into the two screen regions the layout
+names, `steering/` and `surface/` — plus `hooks/` and `lib/`, with `types.ts`
+and `index.ts` at the root. Its `lib/` modules are imported directly, because no
+folder in it has earned a door yet.
 
 When it is worth writing, this is the section it goes in, and three things have
 to be true of it:

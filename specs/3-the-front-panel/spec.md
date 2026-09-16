@@ -23,15 +23,17 @@ Top to bottom:
    glyph at the right.
 2. **Two knobs** — `SWING` (0 … 60, reads `60%`) and `TEMPO` (10 … 120, reads
    `BPM`), each on a tick ring with end labels.
-3. **A row of three buttons** — `PLAY` (wide, green, lit), `TAP TEMPO`
-   (grey, two lines), `AUTO FILL` (amber, lit).
+3. **A row of three buttons** — `PLAY` (wide, green, its lamp always on),
+   `TAP TEMPO` (machined steel), `AUTO FILL` (amber). `app2.png` draws `AUTO
+   FILL` lit; it starts unlit here, because `## Decided` makes it a latch and
+   nothing has turned it on.
 4. **The pad grid** — 8 backlit amber pads, 4 × 2, inset in a darker well:
    Kick · Snare · Hi-Hat · Ride · Cowbell · Shaker · Toms · Crash.
 5. **The feel slider** — `FEEL` over a ticked track, a metal thumb, `thin` and
    `fat` at the ends, `75%` under the thumb, with `AUTO FEEL` beside it.
 
-Whole thing sits on a brushed-metal panel with a rounded bezel and screws at the
-top corners.
+Whole thing sits on a brushed-metal panel with a rounded bezel. `app2.png` draws
+screws in the corners; `## Decided` records why they are not built.
 
 ## Done when
 
@@ -119,6 +121,38 @@ top corners.
   slice, `src/lib` and `src/app`) rather than on uncertainty, and every
   requirement here is already settled, so the risk it warns about is not the
   risk this change carries.
+
+* **Which way does the FEEL fader drag?** — horizontally, along the track it is
+  drawn on; the knob stays vertical, and both keep the same 160px of travel.
+  Decided during `/implement`, correcting a line the tech spec had frozen the
+  other way: the shared thing between the two controls is the distance, not the
+  axis, and a horizontal control that ignores a horizontal drag reads as broken.
+
+* **CSS gradients only, or whatever it takes?** — whatever it takes. Reversed
+  during `/implement`, by Fred, on seeing the first render: "it looks way too
+  far away from the original. Let's drop the idea of css-only and work with
+  whatever you need to make it look awesome!" The recipes now carry inline
+  `feTurbulence` noise, specular sweeps, blend modes and layered shadows, and
+  the panel uses real display and condensed faces. **No component changed** —
+  they only ever apply recipe names, which is [ADR 0004](../../docs/adr/0004-the-look-is-a-named-surface-vocabulary.md)
+  paying for itself.
+* **How does a `needs a look` bullet actually get looked at?** — Playwright, as
+  a devDependency, plus `.shots/shoot.mjs`: it screenshots the running app at a
+  given width and colour scheme. Added because the first render was green on
+  every check and visually wrong, and nothing in the repo could have told us.
+
+* **The corner screws** — not built. Fred, on seeing the panel: "remove the
+  screws on the corners". `MetalSurface` lost the `screws` prop rather than
+  keeping an option nobody passes, and `@utility screw` went with it, so the
+  vocabulary has no recipe without a user.
+* **How are the knob and the fader thumb drawn?** — as inline SVG, after Fred
+  called the first pass cheap. The defect was the shading model, not the medium:
+  the grain ran in vertical pinstripes across a round cap. SVG buys what CSS
+  could not draw — 44 knurled collar teeth as real geometry, concentric turned
+  grain that fades to nothing at the centre, a rim catch and an engraved needle.
+  Images were considered and rejected: they would have to be generated from the
+  same maths, and a baked PNG fixes its colours, so light and dark become two
+  assets that drift from the vocabulary.
 
 ## Open
 

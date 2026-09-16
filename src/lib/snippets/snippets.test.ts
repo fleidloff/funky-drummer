@@ -47,9 +47,23 @@ function withoutSpecifiersAndTitles(source: string): string {
   return source.replace(SPECIFIER, '').replace(TEST_TITLE, '')
 }
 
+// A fragment is a copy only where it stands as its own word. Without the
+// boundaries, `panel.autoFeel` reads as a copy of "Feel" and the English word
+// "nothing" as a copy of "thin"; `reword` is what catches a real copy anyway.
+function asWholeWord(fragment: string): RegExp {
+  const escaped = fragment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const open = /^[\p{L}\p{N}_]/u.test(fragment) ? '\\b' : ''
+  const close = /[\p{L}\p{N}_]$/u.test(fragment) ? '\\b' : ''
+
+  return new RegExp(`${open}${escaped}${close}`, 'u')
+}
+
 const outsideTheModule = sourceFiles(join(repoRoot, 'src')).filter(
   (file) => !file.startsWith(snippetsDir),
 )
+const designSystemDir = join(repoRoot, 'src', 'components') + sep
+const designSystem = outsideTheModule.filter((file) => file.startsWith(designSystemDir))
+const designSystemComponents = designSystem.filter((file) => !/\.test\.tsx?$/.test(file))
 const testFilesOutsideTheModule = outsideTheModule.filter((file) => /\.test\.tsx?$/.test(file))
 
 const guardedFragments = [
@@ -67,11 +81,36 @@ describe('snippets', () => {
     const copies = testFilesOutsideTheModule.flatMap((file) => {
       const prose = withoutSpecifiersAndTitles(readFileSync(file, 'utf8'))
       return guardedFragments
-        .filter((fragment) => prose.includes(fragment))
+        .filter((fragment) => asWholeWord(fragment).test(prose))
         .map((fragment) => `${relative(repoRoot, file)} writes "${fragment}"`)
     })
 
     expect(copies).toEqual([])
+  })
+
+  it('reads enough of the design system to be worth trusting', () => {
+    expect(designSystemComponents.length).toBeGreaterThan(15)
+  })
+
+  it('is never imported by the design system', () => {
+    const reaching = designSystem.flatMap((file) =>
+      specifiersOf(readFileSync(file, 'utf8'))
+        .filter((specifier) => specifier.endsWith('/lib/snippets'))
+        .map((specifier) => `${relative(repoRoot, file)} imports "${specifier}"`),
+    )
+
+    expect(reaching).toEqual([])
+  })
+
+  it('holds every word the design system renders, because a primitive takes them as props', () => {
+    const held = designSystemComponents.flatMap((file) => {
+      const prose = withoutSpecifiersAndTitles(readFileSync(file, 'utf8'))
+      return guardedFragments
+        .filter((fragment) => asWholeWord(fragment).test(prose))
+        .map((fragment) => `${relative(repoRoot, file)} writes "${fragment}"`)
+    })
+
+    expect(held).toEqual([])
   })
 
   it('is reached only through its own surface', () => {

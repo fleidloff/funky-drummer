@@ -598,6 +598,12 @@ computed from the bar index, the tempo and the swing. Nothing accumulates.
 
 ## Tempo
 
+**These three tables are the app's source, not a note about it.** Since V3 the
+front panel reads them through `src/features/panel/lib/ranges.ts`, which carries
+the range, the step and the resting value of each control. Changing a number
+here is a change to what the knobs do, and `ranges.ts` is the one file that has
+to move with it.
+
 | | Value |
 | :-- | :-- |
 | Range | 60–180 BPM |

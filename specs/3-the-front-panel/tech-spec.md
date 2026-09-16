@@ -44,6 +44,12 @@ makes the light theme one file rather than twenty.
 `--color-steel-*`, `--color-well`, `--color-etch*` and `--color-tick` change
 between the two. The lamps, the engraved amber and the green do not.
 
+**The recipes are not restricted to gradients.** That was frozen here and
+reversed mid-build once the panel was rendered and seen; `spec.md` records why.
+They now use inline `feTurbulence` noise as a data URI, specular sweeps,
+`background-blend-mode` and layered inset shadows, and the vocabulary grew two
+recipes the look needed — `surface-collar` and `button-steel`.
+
 Composite recipes — the brush grain, the knob dish, the pad glow, the bezel —
 are `@utility` classes in the same file (`surface-metal`, `surface-well`,
 `surface-steel`, `lamp-amber`, `lamp-green`, `engraved`, `etched`). A component
@@ -90,6 +96,8 @@ function EtchedLabel(props: { size: 'control' | 'scale'
 // display/ — renders a value read-only
 function Readout(props: { children: ReactNode }): ReactNode
 function TickArc(props: { count: number }): ReactNode
+function KnobFace(props: { angle: number }): ReactNode      // the turned cap, in SVG
+function ThumbFace(): ReactNode                             // the fader thumb, in SVG
 function TickBar(props: { count: number }): ReactNode
 function Glyph(props: { name: 'speaker' }): ReactNode        // aria-hidden, inert
 
@@ -109,10 +117,18 @@ function Knob(props: ContinuousProps): ReactNode
 function Fader(props: ContinuousProps): ReactNode
 
 function BacklitButton(props: { label: string; tone: Tone; lit: boolean
-                                pulsing?: boolean; onToggle: () => void }): ReactNode
+                                pressed?: boolean; pulsing?: boolean
+                                onToggle: () => void }): ReactNode
 function MomentaryButton(props: { label: string; tone: Tone
                                   onPress: () => void }): ReactNode
 function Pad(props: { label: string; lit: boolean; onToggle: () => void }): ReactNode
+
+// controls/useContinuous.ts — ContinuousProps lives here, with the shared
+// drag-and-keyboard mechanism both controls are built on
+function useContinuous(props: ContinuousProps, axis: 'vertical' | 'horizontal'): {
+  ratio: number
+  slider: Record<string, unknown>   // the role, the four ARIA values, the handlers
+}
 
 // controls/dragValue.ts — plain function, no DOM
 function dragValue(args: { start: number; deltaPx: number; min: number
@@ -155,10 +171,14 @@ per ADR 0003 they stay in the feature's `lib/format.ts`.
   Tempo 60–180, default 96. Swing 50–66.7%, default 54. Feel 0–1, default 0.5,
   shown as a percentage. The two mockups draw different scales and neither
   agrees with the document.
-* **Drag geometry:** vertical, 160px of travel sweeps the full range, on both
-  the knob and the fader, so the two controls feel like the same hand movement.
-  Arrow keys move one `step`, Page keys ten. *Whether 160px is right needs a
-  look, not a test.*
+* **Drag geometry:** 160px of travel sweeps the full range on both controls, so
+  they take the same hand movement — but each drags along its own axis: the knob
+  vertically, the fader horizontally along the track it is drawn on. Arrow keys
+  move one `step`, Page keys ten, Home/End go to the ends. *Whether 160px is
+  right needs a look, not a test.*
+  **This line was frozen as "vertical on both" and corrected mid-build**, once
+  Track E pointed out it made the fader's thumb move at ninety degrees to the
+  finger. `spec.md` records the decision.
 * **The feature holds its dummy state in one hook**, `hooks/usePanelState.ts`,
   returning the values and the setters the regions need. Nothing is persisted —
   persistence is `Project.md`'s phase 6.
@@ -218,9 +238,10 @@ contracts above freeze every name they share.
   and their tests
 * **Needs to start:** the `@utility` names from the contracts
 
-1. **red** — each renders its children, applies its recipe class, and
-   `MetalSurface` draws four screws when `screws` is set and none when it is
-   not. The screws are `aria-hidden`.
+1. **red** — each renders its children and applies its recipe class.
+   **The screws this step originally required were cut mid-build** at Fred's
+   request; `spec.md` records it, and the prop and the `screw` recipe went with
+   them rather than staying as an option nobody passes.
 2. **green** — write them.
 
 #### Track D — Typography and display

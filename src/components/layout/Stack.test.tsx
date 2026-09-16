@@ -15,3 +15,26 @@ describe('Stack', () => {
     expect(screen.getByText('second')).toBeInTheDocument()
   })
 })
+
+describe('Stack alignment', () => {
+  it('stretches its children by default', () => {
+    render(<Stack gap={2}>Knurl</Stack>)
+
+    expect(screen.getByText('Knurl')).toHaveClass('items-stretch')
+  })
+
+  it.each([
+    ['start', 'items-start'],
+    ['center', 'items-center'],
+    ['end', 'items-end'],
+    ['stretch', 'items-stretch'],
+  ] as const)('aligns %s as %s', (align, expected) => {
+    render(
+      <Stack gap={2} align={align}>
+        Gubbins
+      </Stack>,
+    )
+
+    expect(screen.getByText('Gubbins')).toHaveClass(expected)
+  })
+})

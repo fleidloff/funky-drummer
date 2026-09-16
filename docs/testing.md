@@ -38,6 +38,14 @@ about drift.
 **An assertion nothing but an ear can settle is stated as such**, in the spec
 and in the report, rather than dressed up as a passing test.
 
+**The same goes for an eye, and V3 paid for learning it.** The front panel was
+green on all three commands, passed every structural guard, and looked wrong —
+flat metal, flat knobs — because no test in this repo renders a pixel. A
+`needs a look` bullet is only settled by looking, so the repo carries the means
+to look: Playwright as a devDependency and `.shots/shoot.mjs`, which screenshots
+the running app at a given width and colour scheme. Take the shot at a phone
+width and a desktop width in both schemes before calling a visual bullet done.
+
 ## Not every assertion runs under `npm test`
 
 A type-level assertion is checked by `tsc`, which runs in `npm run build` — not
@@ -46,7 +54,17 @@ the standard case: widening the type to `number` passes all of `npm test` while
 failing the build. Know which command holds a given guard before trusting a green
 run, and say so in the test when it is not the obvious one.
 
-**The styling boundary is held by `npm run lint` alone.**
+**The styling boundary has two halves, held by different commands.** *Where*
+styling may be written is held by `npm run lint` alone; *what* a component may
+write is held by a structural test. `src/app/theme.test.ts` reads `globals.css`
+and the whole UI tree from disk and fails on a palette utility, a literal
+colour, a `dark:` variant or a read of `prefers-color-scheme`
+([ADR 0004](adr/0004-the-look-is-a-named-surface-vocabulary.md)). So a component
+that hard-wires itself to one colour scheme is caught by `npm test`, while a
+`className` reintroduced into a feature is caught only by lint. Knowing which is
+which is the difference between a green run and a checked one.
+
+**The `className` half is held by `npm run lint` alone.**
 [coding-guidelines.md](coding-guidelines.md#feature-slices) bans `className`
 under `src/features/`, and `eslint.config.test.ts` lints the styling block
 against *fixture strings* — so it proves the block is configured and fails if it

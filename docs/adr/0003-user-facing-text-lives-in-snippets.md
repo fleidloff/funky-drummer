@@ -65,6 +65,25 @@ not see because it matched whole fragments only. The suite was green at 53 tests
 with two of them planted, and rewording turned both red. **"Both are enforced"
 was the sentence this paragraph used to end on, and it was not true.**
 
+**V3 narrowed the advisory to whole words, and that was a fix rather than a
+weakening.** It matched a snippet's text by raw substring, so once the panel's
+words existed it read `panel.autoFeel` as a copy of `Feel` and the ordinary
+English word *nothing* as a copy of `thin` — both legitimate, both rejected. It
+now requires the fragment to stand as its own word. A planted `{ name:
+'Cowbell' }` still fails the advisory *and* fails `reword`, which is the gate
+that matters; what the narrowing gives up is a snippet word glued to a suffix
+inside a quoted string, such as `'Hi-Hats'`, which matches no rendered label and
+is dead text rather than a working copy. An advisory that cries wolf gets
+widened around, and that is worse than one with a named blind spot.
+
+**V3 also pointed it at the design system.** This record has always said no file
+under `src/components/` may hold an app word or import `@/lib/snippets`, and
+until V3 nothing checked it. `snippets.test.ts` now fails if any design-system
+component names a snippet word or writes a specifier ending `/lib/snippets`,
+with a count assertion keeping the scan non-vacuous. It reads the real words in
+both projects, so unlike a guard in `src/app/theme.test.ts` it is not silently
+disarmed by the scrambler.
+
 `snippets.test.ts` stays, demoted to an advisory: it names the file and the word
 for a whole-fragment copy, which is a better error message than a missing DOM
 node. It imports `./index` relatively, which the plugin does not intercept, so it
