@@ -1,0 +1,27 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg: #f4f4f5;
+  --color-fg: #18181b;
+  --color-muted: #71717a;
+  --color-border: #d4d4d8;
+  --color-accent: #b45309;
+
+  --radius-panel: 0.75rem;
+  --radius-control: 0.375rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #18181b;
+    --color-fg: #e4e4e7;
+    --color-muted: #a1a1aa;
+    --color-border: #3f3f46;
+    --color-accent: #f59e0b;
+  }
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-fg);
+}

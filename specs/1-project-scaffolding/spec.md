@@ -1,7 +1,7 @@
 # V1. Project scaffolding
 
 Started 2026-09-16 · `/brainstorm`
-**Phase:** ready to build — `/implement 1`
+**Phase:** built, D5 open — `/implement 1` ran 2026-09-16
 
 ## What
 
@@ -75,6 +75,12 @@ Started 2026-09-16 · `/brainstorm`
 * **`README.md` and `.gitignore` are deleted first** — Fred's call: "basically
   empty". Next's `.gitignore` replaces the latter, with `.idea/` and `.verify/`
   re-added because it carries neither.
+
+* **The size test's second question is waived** — the change touches `src/app`,
+  `src/components`, `src/lib` and the root config, which is more than the two or
+  three areas `/brainstorm` §7 asks for. Flagged before the build and waived by
+  Fred running `/implement 1` anyway. A scaffolding change is the one change that
+  touches every folder once, and half of it ships a repo that does not build.
 
 ## Open
 

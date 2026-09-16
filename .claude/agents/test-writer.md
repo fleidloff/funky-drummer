@@ -127,6 +127,24 @@ sentence typed into a test file is a second place the wording lives, which a
 reword has to find. A snippet that takes arguments is called with the ones the
 module passes.
 
+**This one is proven, not trusted.** `npm test` runs two projects over the same
+files: `suite`, and `reword`, where `@/lib/snippets` resolves to a generated
+module whose every string has become `«reworded:notFound.body»`. A test that
+imports the snippet reads the same scrambled value the component renders, so it
+passes both. A test that copied a word passes `suite` and fails `reword`.
+
+**A failure quoting `«reworded:…»` means you wrote down a word you should have
+imported.** The fix is always to import the snippet — never to exclude the file,
+never to loosen the matcher to something the scramble happens to satisfy. If you
+believe an assertion legitimately needs a snippet's content, stop and report it
+rather than working around the project.
+
+The shape that catches people is a partial quote: `getByText(/does not exist/)`
+against `notFound.body`. It reads as a loose, robust matcher and it is a copy.
+Reach for `getByText(notFound.body)` instead. An interpolating snippet keeps its
+arguments under the scramble, so asserting that the number `12` reached the DOM
+is fine — it is the sentence around it that you may not write down.
+
 ## Structural tests
 
 Some conventions no linter can check are guarded by tests that read the tree or

@@ -144,7 +144,7 @@ Done when you can leave every automatic control on and just play.
 
 ### Phase 5 — It looks the part
 
-- The skeuomorphic panel from `app.jpg`
+- The skeuomorphic panel from `app2.png`
 - Knob and slider interaction that feels physical on touch
 - Mobile-first portrait layout
 

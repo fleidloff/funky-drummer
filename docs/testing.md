@@ -48,12 +48,17 @@ run, and say so in the test when it is not the obvious one.
 
 **The styling boundary is held by `npm run lint` alone.**
 [coding-guidelines.md](coding-guidelines.md#feature-slices) bans `className`
-under `src/features/`, and the config test that guards it lints *fixture
-strings* — so it proves the rule block is configured and fails if the block is
-deleted, but it never reads `src/features/` from disk. A `className`
-reintroduced into a real feature file passes the whole suite and is caught only
-by lint. A CI path running `npm test` without `npm run lint` does not carry that
-rule.
+under `src/features/`, and `eslint.config.test.ts` lints the styling block
+against *fixture strings* — so it proves the block is configured and fails if it
+is deleted, but it never reads a real feature file. A `className` reintroduced
+into one passes the whole suite and is caught only by lint. A CI path running
+`npm test` without `npm run lint` does not carry that rule.
+
+**The import zones are a different case, and the distinction matters.** They
+*do* touch the tree: `import/no-restricted-paths` returns early when a specifier
+does not resolve on disk, so a zone reaching into `src/features/` cannot fire
+against a string alone. That test writes transient fixtures and deletes them —
+see [ADR 0002](adr/0002-zones-are-proven-against-real-fixtures.md).
 
 ## Changing a word must never fail a test
 
@@ -63,8 +68,47 @@ second place that wording lives, so a reword breaks a test that has nothing to
 do with wording — and everyone learns that changing copy is risky.
 
 Assert *which* snippet a thing shows by importing it:
-`getByRole('button', { name: transport.play })`. A test inside the snippets
-module enforces it.
+`getByRole('button', { name: transport.play })`.
+
+**The rule is proven by rewording, not by reading the source.** `npm test` runs
+two Vitest projects over the same files:
+
+| Project | What it runs |
+| :-- | :-- |
+| `suite` | the app as it is written |
+| `reword` | the same files, with `@/lib/snippets` resolved to a generated module whose every string has become `«reworded:notFound.body»` |
+
+A test that imports the snippet reads the same scrambled value the component
+renders, so it passes both. A test that copied a word passes `suite` and fails
+`reword`. **A failure mentioning `«reworded:…»` means the test wrote down a word
+it should have imported** — import the snippet, never reach for an exemption. An
+interpolating snippet keeps its arguments under the scramble, so an assertion
+about an interpolated *value* — the number, not the sentence — survives.
+
+`vitest.reword.ts` holds the scrambler and the Vite plugin, beside the config it
+serves.
+
+**Only the specifier `@/lib/snippets` is scrambled.** A module that reaches the
+snippets by relative path still reads the real words in both projects — which is
+why `snippets.test.ts`, which imports `./index`, keeps working as an advisory
+inside the `reword` run and reports a whole-fragment copy there too. Nothing else
+in the tree reaches snippets that way, and nothing should: the rule is that
+`@/lib/snippets` is the only path a caller writes.
+
+**Why a reword run rather than a cleverer string search.** V2 planted three
+violations against the string-matching guard that used to be the whole of this
+rule. It caught a whole quote under `src/`. It never read a test file at the repo
+root. And it could not see `getByText(/does not exist/)` — half of
+`notFound.body` — because it matched whole fragments only. Two planted violations
+sat in a green suite of 53 tests until a reword turned them red. A heuristic that
+reads the source can always be fooled by a quote written slightly differently; a
+run with the words actually changed cannot.
+
+`snippets.test.ts` stays as the fast advisory. For a whole-fragment copy it names
+the file and the word, which beats a missing DOM node. It is not widened any
+further — its length floor, its `src/`-only scan and its whole-fragment match are
+the `reword` project's job now. See
+[ADR 0003](adr/0003-user-facing-text-lives-in-snippets.md).
 
 ## A test is not a test until you have seen it fail
 
@@ -117,21 +161,44 @@ ordinary assertions and they are not excused by the probe.
 
 Some conventions no linter can check are guarded by tests that read the tree or
 the source from disk and fail when it drifts. They run under `npm test`, not
-`npm run lint`. **There are none yet** — nothing in `src/` exists to guard. These
-are the ones the shape asks for, each written with the code that first needs it:
+`npm run lint`. Shipped in V1:
 
 | Test | Guards |
 | :-- | :-- |
-| design-system structure | the five component groups, `tokens.ts` at the root, no barrels, no import climbing out of its folder |
-| route boundary | a route reaches a feature only through its `index.ts` — including `vi.mock`, dynamic `import()` and `require()`, which lint cannot see |
+| `src/components/structure.test.ts` | the five component groups, `tokens.ts` at the root, no barrels, no import climbing out of its folder |
+| `eslint.config.test.ts` | each live zone fires on a bad import and stays quiet on a *real legal* one, and the styling block rejects a `className` in a feature while leaving the design system alone. Writes transient fixtures under `src/features/zonefixture-*`, per [ADR 0002](adr/0002-zones-are-proven-against-real-fixtures.md) |
+| `src/lib/snippets/snippets.test.ts` | the language folder is private to the index — enforced. That no test writes out what a snippet says is *advised* here, with a good error message, and **proven** by the `reword` project |
+| `src/app/routes.test.ts` | no route writes JSX text, an inline accessible name, or an inline metadata word — parsed with the TypeScript compiler API, walking `src/app/` recursively |
+| `deployability.test.ts` | `engines.node` declared, the script set invents no command, no custom `output` mode, `.next` ignored |
+| `vitest.reword.test.ts` | three layers of the gate. The scrambler's shapes and the plugin's `enforce: 'pre'` ordering; that `vitest.config.ts` installs both projects, with the plugin on exactly one and a distinct `groupOrder` on both; and — the layer that matters — that `@/lib/snippets` actually **yields a placeholder under `reword` and the real word under `suite`**. The first two pin the gate's shape and a mutant can slip under them: make the generated module re-export the real snippets and every shape assertion still passes while the gate is dead. The third kills it. A fourth pins the *file set*: both projects must get the same `include`, and `passWithNoTests` is off at the root — otherwise one line narrowing `reword` to `src/`, or pointing it at nothing, disables the gate with a green suite. Runs in the `node` environment, since importing the config pulls in esbuild |
+
+**A structural test that writes to the tree may not run concurrently with
+itself.** `eslint.config.test.ts` creates and deletes `src/features/zonefixture-*`
+while it runs. When V2 added the `reword` project over the same files, the two
+copies raced and the suite failed about two runs in five — `ENOENT` on a fixture,
+and the same files vanishing under `snippets.test.ts`, which walks `src/`. The
+projects are ordered by `sequence.groupOrder` in `vitest.config.ts` so that never
+overlaps. **Before adding a project, a shard or a parallel CI job over these
+files, check what writes to the tree** — the failure reads as an unrelated flake,
+not as a race. See [ADR 0002](adr/0002-zones-are-proven-against-real-fixtures.md).
+
+Still to write, each with the code that first needs it:
+
+| Test | Guards |
+| :-- | :-- |
+| route boundary | a route reaches a feature only through its `index.ts` — including `vi.mock`, dynamic `import()` and `require()`, which lint cannot see. Nothing to guard until a feature slice exists |
 | theme | every custom property `@theme` reaches for is declared somewhere, and the body is dressed in the theme |
-| lint config | each live lint zone fires on a bad import and stays quiet on a good one, and the styling block rejects a `className` in a feature while leaving one under `src/components/` alone — against fixture strings, never the real tree |
-| snippets | the language folder is private to the index, and **no test anywhere writes out what a snippet says** |
 | docs | every record in `docs/adr/` has a row in `adrs.md` with a status, and the numbers run without a gap or a repeat |
 | groove data | every groove file imports the shape, the shared records and the step grid — and never another groove |
 
 The guidelines say which rule each one stands behind, and which rules
 `npm run lint` enforces instead.
+
+**A structural test reads the tree through `import.meta.dirname`, never
+`fileURLToPath(new URL(…, import.meta.url))`.** Under Vitest's jsdom environment
+`import.meta.url` is rewritten to an `http:` URL and `fileURLToPath` throws
+*The URL must be of scheme file*. Every guard in this repo reads from disk, so
+every one of them meets this.
 
 Write one when a convention is a fact about the tree — a folder set, a public
 surface, a file that may not import something a linter cannot see, such as a

@@ -48,8 +48,10 @@ draw. The direction is what makes the slices work:
   feature is on screen.
 
 The guidelines draw the full graph and name the ESLint zone behind each arrow.
-The zones are meant to exist and be tested rather than described — a rule that
-has only ever been seen to pass is a comment.
+Since V1 the zones exist and are tested rather than described — each one is
+watched to reject a bad import and to accept a good one
+([ADR 0002](adr/0002-zones-are-proven-against-real-fixtures.md)), because a rule
+that has only ever been seen to pass is a comment.
 
 ```
 src/app/         → a feature's index.ts, src/components/, src/lib/

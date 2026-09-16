@@ -11,9 +11,10 @@ That is a debt, not a style: the first time a rule meets a real file in this
 tree, add the citation. A rule this project never finds a reason for does not
 belong in this document — delete it rather than leaving it as decoration.
 
-**Nothing in `src/` exists yet either**, so the *lint-enforced* tag below says
-what the config must do once it is written, not what a linter is doing today.
-The first change that writes code writes the config with it.
+V1 built the tree and the config, so the *lint-enforced* tag below is live:
+`eslint.config.mjs` and `eslint.zones.mjs` exist and `npm run lint` fails on a
+violation. The rules that still name no file are the ones nothing has exercised
+yet.
 
 Each rule is tagged:
 
@@ -341,15 +342,29 @@ screen.getByRole('button', { name: transport.play })
 
 **What a linter stops, and what it does not.** Nothing mechanical fires on an
 inline string in a component — the next inline label is caught in review or not
-at all. The *test* half is what gets guarded: a test in the snippets module
-reads every string the module can render, including what its interpolating
-functions return, and fails if any test file outside the module writes one down.
-It excludes module specifiers (a path containing the app's name is not prose),
-test titles (rewording cannot fail them), and the module's own tests (where a
-sentence must be written out).
+at all.
+
+The *test* half is not checked by reading the source, because that can be fooled.
+`npm test` runs the suite twice: once as written, and once as a `reword` project
+in which `@/lib/snippets` resolves to a generated module whose every string has
+become `«reworded:app.name»`. A test that imports the snippet reads the same
+scrambled value the component renders and passes both. A test that copied a word
+fails `reword`. **A `«reworded:…»` in a failure means the test wrote down a word
+it should have imported.** An interpolating snippet keeps its arguments, so an
+assertion about the interpolated value survives while one about the sentence does
+not.
+
+`snippets.test.ts` still reads the source, and still fails if a test file writes
+a snippet out whole — it names the file and the word, which is the better error
+message. It is an advisory, not the gate: it matches whole fragments only, skips
+anything under four characters and never reads outside `src/`, and all three are
+the `reword` project's job now. It excludes module specifiers (a path containing
+the app's name is not prose), test titles (rewording cannot fail them), and the
+module's own tests (where a sentence must be written out).
 
 *human-checked* for the component half — a linter cannot tell `'Allegro'` from
-`'No streak yet'`. *Guarded by a test* for the assertion half.
+`'No streak yet'`. *Proven by a test run* for the assertion half, per
+[ADR 0003](adr/0003-user-facing-text-lives-in-snippets.md).
 
 **`src/lib/` is a leaf: nothing in it may import `src/features/` or
 `src/components/`.** Being a leaf is the mechanism, not tidiness: it is what
@@ -514,12 +529,19 @@ held an offline generator out of the app tree. This project has no generator, so
 the zone does not exist. The gap is kept so a reader comparing the two configs
 does not have to renumber anything.
 
-**Zones are proven, not believed.** A config test drives ESLint's Node API over
-this repo's own config on synthetic source with a virtual `filePath`, asserting
-each live zone both fires on a bad import and stays quiet on a good one. A
-fixture committed to the tree would fail `npm run lint` for everyone, so this is
-the only way a zone is ever *watched to reject* anything — and a rule that has
-only been seen to pass is a comment.
+**Zones are proven, not believed.** `eslint.config.test.ts` drives ESLint's Node
+API over this repo's own config, asserting each live zone both fires on a bad
+import and stays quiet on a good one. The violating code is a synthetic string
+with a virtual `filePath`; a fixture *committed* to the tree would fail
+`npm run lint` for everyone.
+
+**But a string alone cannot fire a zone that reaches into `src/features/`.**
+`import/no-restricted-paths` resolves each specifier and returns early when it
+does not resolve on disk, so zones 2, 3 and 6 need a real import target. The
+test writes `src/features/zonefixture-*` in `beforeAll`, removes them in
+`afterAll`, and the path is gitignored —
+[ADR 0002](adr/0002-zones-are-proven-against-real-fixtures.md) records why this
+is the only shape that works.
 
 **Zone 3 is the exception, and the reason is worth keeping.** Its target is the
 sibling features, so with one feature the generated zone does not exist at all
@@ -527,10 +549,12 @@ and nothing can fire it. Assert it at the generator instead, by calling the zone
 builder with two invented feature names — that is the half a second slice
 inherits with no config edit, and the half nobody would notice was missing.
 
-**A "stays quiet" case that imports nothing proves less than it looks.** Zones 4
-and 6 are checked against a module importing nothing at all, which shows no
-spurious firing but not that a *legal* import is permitted. That is structural
-while `src/lib/` is empty; revisit it when the first module lands there.
+**A "stays quiet" case that imports nothing proves less than it looks.** Such a
+case shows no spurious firing, but not that a *legal* import is permitted — so
+every quiet case in this repo is a real import to a file that exists:
+`@/features/zonefixture-alpha` through zone 2's `except`, `@/lib/snippets` for
+zones 3 and 4, one `lib/` concern folder to another for zone 6. Keep that shape
+when adding a zone; the weaker version is what the fixtures exist to avoid.
 
 **Zones inside a slice come later.** Zone 6 is the first whose `target` and
 `from` are both inside one feature; more of them — the arrows *between* a
