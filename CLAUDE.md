@@ -39,7 +39,7 @@ background.
 | [docs/adr/](docs/adr/) | Why the shape is this one, in the order it was decided |
 
 The `musician` agent treats `docs/music.md` as its source of truth and stops when
-it is missing. Write it before asking that agent for a musical decision.
+it is missing.
 
 ### ADRs
 
@@ -68,8 +68,8 @@ of them can run at once on disjoint files.
 | `musician` | Anything about feel, timing or sound. It decides; it writes no code |
 | `verifier` | Grading a change against its `## Done when` bullets. It never fixes |
 
-The skills in `.claude/skills/` drive them: `/vibe-with-docs` specs a change into
-`specs/N-title/`, `/prototype` mocks it up, `/implement-vibe-with-docs` builds
+The skills in `.claude/skills/` drive them: `/brainstorm` specs a change into
+`specs/N-title/`, `/prototype` mocks it up, `/implement` builds
 it.
 
 ## Before calling anything done

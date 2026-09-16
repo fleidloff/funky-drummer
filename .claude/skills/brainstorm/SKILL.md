@@ -1,10 +1,10 @@
 ---
-name: vibe-with-docs
-description: Design a feature in chat, one question at a time, and write the answers down as you go — allocates `specs/N-title/`, fills `spec.md` with what the change is and what done means, then `tech-spec.md` with how it gets built. Every question arrives as options with exactly one recommended. Asks in the conversation rather than in the document, and keeps asking until it is 90% confident. Writes no code; `/implement-vibe-with-docs N` builds it. Use whenever the user runs `/vibe-with-docs`, or asks to think a feature through in chat, design something conversationally, or spec a change before building it.
+name: brainstorm
+description: Design a feature in chat, one question at a time, and write the answers down as you go — allocates `specs/N-title/`, fills `spec.md` with what the change is and what done means, then `tech-spec.md` with how it gets built. Every question arrives as options with exactly one recommended. Asks in the conversation rather than in the document, and keeps asking until it is 90% confident. Writes no code; `/implement N` builds it. Use whenever the user runs `/brainstorm`, or asks to think a feature through in chat, design something conversationally, or spec a change before building it.
 argument-hint: [what to build]
 ---
 
-# Vibe with docs
+# Brainstorm
 
 Design a change in the conversation and write the answers down as they land.
 
@@ -21,12 +21,12 @@ a test, not a one-line fix, not a spike. This skill writes exactly two files,
 both under `specs/N-title/`. Reading the tree is the job; writing to it is
 not.
 
-`/implement-vibe-with-docs N` builds it, and is the only thing that does.
+`/implement N` builds it, and is the only thing that does.
 
 ## 1. Start in the conversation, immediately
 
 No interview ceremony, no "shall I begin". Take whatever the user gave —
-`/vibe-with-docs a practice timer`, or a bare `/vibe-with-docs` — and:
+`/brainstorm a practice timer`, or a bare `/brainstorm` — and:
 
 1. Allocate the folder (§2).
 2. Write what you already know into `spec.md`.
@@ -50,10 +50,10 @@ specs/<N>-<kebab-title>/
 `specs/` or the two tables in [specs/features.md](../../../specs/features.md).
 Take it from both — numbers are never reused, and a candidate promoted from the
 second table gets its number here, not there. Neither exists yet, so the first
-change is `1` and `/implement-vibe-with-docs` creates the archive with it.
+change is `1` and `/implement` creates the archive with it.
 
 **The folder stays.** It is committed like any other source, it survives the
-change shipping, and nothing in this door deletes it: `/implement-vibe-with-docs`
+change shipping, and nothing in this door deletes it: `/implement`
 §8 turns what is worth keeping into an ADR and a docs change, §9 marks the row
 in `specs/features.md` **done**, and §10 hands the folder back to you for a last
 look. Removing it afterwards is your call and yours alone.
@@ -70,8 +70,8 @@ the end.
 ```markdown
 # V<N>. <Title>
 
-Started <YYYY-MM-DD> · `/vibe-with-docs`
-**Phase:** spec | tech spec | ready to build — `/implement-vibe-with-docs <N>`
+Started <YYYY-MM-DD> · `/brainstorm`
+**Phase:** spec | tech spec | ready to build — `/implement <N>`
 
 ## What
 
@@ -249,7 +249,7 @@ change itself.
   contract `implementer`, one deciding shape or decomposition `architect`, and
   **any track whose work is a musical or timing decision takes `musician`** —
   what the click sounds like, how a subdivision is felt, what a tempo range
-  means. `/implement-vibe-with-docs` reads this field to decide what to
+  means. `/implement` reads this field to decide what to
   dispatch, so a track without one leaves it guessing.
 - **State real dependencies only.** Ask what a track needs to *start* versus to
   *finish*. Most answers are a contract, and the contract already exists.
@@ -303,7 +303,7 @@ Four questions against the files `tech-spec.md` names:
 4. Would one `git revert` roll it back?
 
 Failing them is a **suggestion**, not a gate. Say which question failed and what
-it costs, once. The move is to split it into two vibed changes that each ship
+it costs, once. The move is to split it into two specced changes that each ship
 something, not to build it more carefully. A waiver goes in `spec.md` under
 `## Decided`, in the user's words.
 
@@ -320,13 +320,13 @@ first step".
 
 Report: the folder path, the number, what `## What` says in one line, how many
 `## Done when` bullets there are, the files `tech-spec.md` names, the size
-test's verdict, and `/implement-vibe-with-docs <N>` as the next command.
+test's verdict, and `/implement <N>` as the next command.
 
 ## Re-running it
 
-`/vibe-with-docs 4` on an existing folder resumes: read both files, say where
+`/brainstorm 4` on an existing folder resumes: read both files, say where
 the conversation left off, and carry on from the first thing still open. Don't
 re-ask what `## Decided` already answers.
 
-`/vibe-with-docs` bare, with folders in `specs/`, lists them with their
+`/brainstorm` bare, with folders in `specs/`, lists them with their
 phase — spec open, tech spec open, ready to build — and asks which.

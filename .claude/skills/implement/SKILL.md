@@ -1,12 +1,12 @@
 ---
-name: implement-vibe-with-docs
-description: Build a change that `/vibe-with-docs` has specced in `specs/N-title/` — write the contracts, run its tracks in waves (or build it in the lead when there is one), gate it with the `verifier` against `spec.md`'s `## Done when` bullets, then turn what is worth keeping into ADRs and docs changes, mark the row done in `specs/features.md`, and hand the folder back for a last check. Never deletes a spec folder. Refuses a folder with no `tech-spec.md` or with anything still open. Use whenever the user runs `/implement-vibe-with-docs`, or asks to build, implement or ship a vibed change.
+name: implement
+description: Build a change that `/brainstorm` has specced in `specs/N-title/` — write the contracts, run its tracks in waves (or build it in the lead when there is one), gate it with the `verifier` against `spec.md`'s `## Done when` bullets, then turn what is worth keeping into ADRs and docs changes, mark the row done in `specs/features.md`, and hand the folder back for a last check. Never deletes a spec folder. Refuses a folder with no `tech-spec.md` or with anything still open. Use whenever the user runs `/implement`, or asks to build, implement or ship a specced change.
 argument-hint: [N]
 ---
 
-# Vibe with docs — implement
+# Implement
 
-The building half. `/vibe-with-docs N` settled what changes and how; this skill
+The building half. `/brainstorm N` settled what changes and how; this skill
 turns that into a diff, and then puts what is worth keeping where it will be
 read again.
 
@@ -26,10 +26,10 @@ instead.
 
 ## 1. Resolve the folder
 
-- `/implement-vibe-with-docs 4` → `specs/4-*/`.
+- `/implement 4` → `specs/4-*/`.
 - Bare → list `specs/` with each folder's phase and ask which. Don't guess
   at the most recent one.
-- No such folder → say so and point at `/vibe-with-docs`.
+- No such folder → say so and point at `/brainstorm`.
 
 ## 2. Refuse unless it was specced
 
@@ -38,9 +38,9 @@ run, and change nothing.
 
 | Folder state | What it means | Say |
 | :-- | :-- | :-- |
-| no `tech-spec.md` | the implementation was never talked through | run `/vibe-with-docs N` |
-| `spec.md` has bullets under `## Open` | specced, not settled | name each one, then run `/vibe-with-docs N` |
-| `## Done when` is empty or missing | there is nothing to grade against | run `/vibe-with-docs N` |
+| no `tech-spec.md` | the implementation was never talked through | run `/brainstorm N` |
+| `spec.md` has bullets under `## Open` | specced, not settled | name each one, then run `/brainstorm N` |
+| `## Done when` is empty or missing | there is nothing to grade against | run `/brainstorm N` |
 
 **Don't answer an open question yourself**, and don't build the option you would
 have picked. An `## Open` bullet built anyway is a decision nobody made,
@@ -52,7 +52,7 @@ build needs it.
 
 ## 3. Re-run the size test
 
-`/vibe-with-docs` §7's four questions, now against the files you actually open.
+`/brainstorm` §7's four questions, now against the files you actually open.
 The tech spec was written from a reading; the code is the thing.
 
 **Escalating mid-build is allowed and expected.** If the third file tells you
@@ -62,7 +62,7 @@ a waiver is the user's to give, and it goes in `spec.md` in their words.
 
 ## 4. Plan the schedule
 
-`tech-spec.md` declares epics, tracks, roles and waves (`/vibe-with-docs` §6).
+`tech-spec.md` declares epics, tracks, roles and waves (`/brainstorm` §6).
 Read them and build the list of **units** — a unit is the smallest chunk one
 agent can own end to end: a track, or a whole epic when it is small.
 
@@ -98,7 +98,7 @@ files the unit owns. Give each worker a brief naming the files to read
 what the user sees), the files it owns, its steps, the test command and its
 definition of done. Workers start with no knowledge of the conversation, so
 anything only said in chat and not written into the two documents does not reach
-them — which is `/vibe-with-docs` §5's rule doing its job.
+them — which is `/brainstorm` §5's rule doing its job.
 
 **When a track declares no role**, fall back to `implementer`, except for a
 track whose work is a musical or timing decision, which takes the

@@ -6,10 +6,10 @@ change, in both tables.
 - **`specs/<N>-<title>/`** is where a change is designed and built. The folder
   stays after it ships — it is the record, not scratch.
 - **Implemented** is the archive: what landed, when, and what it produced.
-  `/implement-vibe-with-docs` writes the row.
+  `/implement` writes the row.
 - **Candidates** is the backlog: things worth building, with enough of a note to
   pick one up cold. A candidate is not a commitment and carries no number until
-  `/vibe-with-docs` allocates one.
+  `/brainstorm` allocates one.
 
 Numbers are never reused. `N` for a new change is one higher than the largest
 in either table.

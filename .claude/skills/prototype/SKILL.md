@@ -1,6 +1,6 @@
 ---
 name: prototype
-description: Build a clickable HTML prototype of a vibed change — one self-contained file under its spec folder, dressed in the app's own tokens, with every screen and state reachable from a switcher bar. Reads `specs/N-title/spec.md` and refuses to run while its questions are open. Use whenever the user runs `/prototype`, or asks for a clickable mockup, a click-dummy, a walkthrough, or to see what a spec would look like before it is built.
+description: Build a clickable HTML prototype of a specced change — one self-contained file under its spec folder, dressed in the app's own tokens, with every screen and state reachable from a switcher bar. Reads `specs/N-title/spec.md` and refuses to run while its questions are open. Use whenever the user runs `/prototype`, or asks for a clickable mockup, a click-dummy, a walkthrough, or to see what a spec would look like before it is built.
 argument-hint: [N]
 ---
 
@@ -13,10 +13,10 @@ is built.
 **It exists to be wrong cheaply.** The spec says the tempo readout stays put all
 session; the prototype is where you find out it pushes the start button below
 the fold. Finding that here costs one file. Finding it in
-`/implement-vibe-with-docs` costs a rebuild.
+`/implement` costs a rebuild.
 
-It is a step in no door. `/vibe-with-docs` doesn't wait for it and
-`/implement-vibe-with-docs` never reads it. Run it when a `spec.md` is settled
+It is a step in no door. `/brainstorm` doesn't wait for it and
+`/implement` never reads it. Run it when a `spec.md` is settled
 and you want to look at it, or skip it entirely.
 
 ## 0. Never commit, never touch `src/`
@@ -53,7 +53,7 @@ worth drawing.
 
 What must hold: `## What` and `## Done when` both say something, and nothing
 under `## Open` is a question the drawing would have to answer. Per
-`/vibe-with-docs` §5 that section carries the question currently being asked, so
+`/brainstorm` §5 that section carries the question currently being asked, so
 an open bullet there is usually the live one — if it decides a screen, name it
 and stop. A bullet parked on something the picture never shows — a storage key,
 a test boundary — doesn't block.
@@ -66,7 +66,7 @@ requirement, and the question they were about to answer never gets asked.
 
 **Most small changes don't want one at all.** A change you can describe in five
 bullets is usually faster to build than to draw. Say so and point at
-`/implement-vibe-with-docs N`, unless the change is visual enough that a picture
+`/implement N`, unless the change is visual enough that a picture
 settles something words are circling.
 
 ## 3. Read the inputs
@@ -179,9 +179,9 @@ not "some visual details".
 **A gap recorded only in the `## Prototype` note is a gap nobody acts on** — the
 note is a footnote on a picture, and the build reads `## Done when` and
 `## Decided`. So anything the drawing invented that the user should actually
-decide **also** goes under `## Open` in `spec.md` as a question — written the way `/vibe-with-docs` §4 writes one, with
+decide **also** goes under `## Open` in `spec.md` as a question — written the way `/brainstorm` §4 writes one, with
 its two to four options and which you would recommend — so the next
-`/vibe-with-docs N` picks it up and the answer lands in `## Decided`, where §8
+`/brainstorm N` picks it up and the answer lands in `## Decided`, where §8
 of the build can turn it into a record. Don't answer it here: this skill draws,
 it does not settle.
 
@@ -203,5 +203,5 @@ parts you couldn't check.
 The file path and the `open` command to run it. The states it holds. The
 invented list from §7, in full — it is the reason to read the report. Anything
 standing in for the real thing (fonts, data, silence where the click would be).
-Then the next step: `/vibe-with-docs N` either way — to answer what the drawing
+Then the next step: `/brainstorm N` either way — to answer what the drawing
 opened, or to move on to the tech spec.

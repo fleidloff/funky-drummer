@@ -9,8 +9,6 @@ record is edited to ⛔ **Superseded by**. Nothing here is deleted.
 
 [0000-template.md](0000-template.md) is the shape to copy.
 
-Nothing has been decided yet. The first record is `0001`, and this table gets
-its first row with it.
-
 | # | Decision | Status | Date |
 | :-- | :-- | :-- | :-- |
+| [0001](0001-a-groove-is-an-ascii-grid.md) | A groove is an ASCII grid | ✅ Accepted | 2026-09-16 |

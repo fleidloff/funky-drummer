@@ -26,7 +26,7 @@ failure of the report — write ones that resolve.
 ## The subject
 
 `specs/N-title/spec.md` is a change designed in chat through
-`/vibe-with-docs`. Six things follow:
+`/brainstorm`. Six things follow:
 
 1. **The criteria are the `## Done when` bullets**, in the order the file writes
    them. There is nothing else to grade: `## What` is the change and
