@@ -559,11 +559,40 @@ otherwise to a snare rimshot.
 Fixed. These are the mix, and there is no user control over them.
 
 **The gains only mean anything if the samples are normalized first.** Every
-sample in the pack is loudness-normalized to the same integrated level before
-any gain is applied. Without that step a gain table is arithmetic on whatever
-level the sample happened to be recorded at, and −8 dB on a hot hi-hat sample is
-louder than 0 dB on a quiet kick. Normalization is measurable and belongs in the
-build, not in the ear.
+sample in the pack is normalized to the same level before any gain is applied.
+Without that step a gain table is arithmetic on whatever level the sample
+happened to be recorded at, and −8 dB on a hot hi-hat sample is louder than 0 dB
+on a quiet kick. Normalization is measurable and belongs in the build, not in
+the ear.
+
+### What "the same level" means
+
+| | Value |
+| :-- | :-- |
+| Target | −21.0 dBFS RMS |
+| Window | 100 ms from the onset |
+| Onset | the first sample reaching −40 dBFS |
+| Measured on | a mono downmix at 44.1 kHz |
+| Tolerance | ±0.5 dB, held by a test |
+
+**Not integrated loudness, and the reason is arithmetic rather than taste.**
+EBU R128 integrates in 400 ms blocks behind a −70 LUFS absolute gate, and most
+of this kit is shorter than 400 ms — a 100 ms rimshot reports the gate floor
+rather than a level. Padding the file with silence or reading the momentary
+maximum both fail the same way, because both still measure over 400 ms and so
+read a short sample quieter than a long one at the same amplitude.
+
+Anchoring the window on the onset rather than on the start of the file matters
+for the same reason at a smaller scale: 50 ms of leading silence moves a
+whole-file reading by 0.6 dB, which is most of the tolerance.
+
+**The target follows from the pack**, as `−1 dBFS − the worst crest factor in
+the set`. The shaker is the worst at 19.7 dB, which gives −20.7, rounded to
+−21.0; the loudest sample then peaks at −1.72 dBFS and nothing clips. Change a
+file or a trim and the number is re-derived rather than kept.
+
+`targetRmsDb` and `rmsWindowMs` live in `src/lib/kit/manifest.ts`, and
+[docs/samples.md](samples.md) records what every file measured.
 
 With that in place, the table below is the mix and nothing else.
 
@@ -895,7 +924,7 @@ somewhere to point.
 | Redistribution rules | `src/lib/groove/redistribute.ts` |
 | Groove grid parser and validator | `src/lib/groove/parse.ts` |
 | Groove library | `src/features/groove-library/` |
-| Kit, samples, relative gains | `src/features/kit/` |
+| Kit, samples, relative gains | `src/lib/kit/` |
 | Scheduler and tolerances | `src/features/transport/` |
 
 When a file lands, update this table in the same change. A row that names a file

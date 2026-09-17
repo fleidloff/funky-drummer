@@ -15,3 +15,5 @@ record is edited to ⛔ **Superseded by**. Nothing here is deleted.
 | [0002](0002-zones-are-proven-against-real-fixtures.md) | The import zones are proven against real fixtures, not strings | ✅ Accepted | 2026-09-16 |
 | [0003](0003-user-facing-text-lives-in-snippets.md) | User-facing text lives in `src/lib/snippets/`, by language | ✅ Accepted | 2026-09-16 |
 | [0004](0004-the-look-is-a-named-surface-vocabulary.md) | The look is a named surface vocabulary, and no component names a colour | ✅ Accepted | 2026-09-16 |
+| [0005](0005-samples-are-normalized-to-onset-window-rms.md) | Samples are normalized to onset-window RMS, not integrated loudness | ✅ Accepted | 2026-09-16 |
+| [0006](0006-the-kit-ships-as-ogg-vorbis-only.md) | The kit ships as Ogg Vorbis only | ✅ Accepted | 2026-09-16 |

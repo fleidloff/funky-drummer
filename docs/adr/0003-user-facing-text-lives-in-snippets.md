@@ -92,15 +92,30 @@ specifier `@/lib/snippets` is scrambled, which is the one a caller is allowed to
 write anyway. It is no longer widened — its length floor, its `src/`-only scan and its
 whole-fragment match are covered by the `reword` project now.
 
-The *component* half — that no new inline string is introduced — is only
-partly guarded. `src/app/routes.test.ts` parses each route with the TypeScript
-compiler API and rejects JSX text, inline accessible names and inline metadata
-words. It does **not** catch a string literal reached through an expression
-container or a local constant (`const heading = 'Funky Drummer'`, then
-`<h1>{heading}</h1>`). Settling that means inverting the guard — deny every
-letter-bearing string literal in a route file, allow a named set of positions
-such as `className` and `href` — and that belongs to the change that first adds
-a feature route, where the exposure actually is.
+**The component half — that no new inline string is introduced — is guarded
+now, and the inversion this record called for is what guards it.** V1's
+`src/app/routes.test.ts` allowed by default and named the three shapes it
+rejected, so a string reached through a local constant or an expression
+container walked past it. V3 then moved every word in the app into
+`src/features/panel/`, which that guard never read at all: replacing
+`{panel.title}` with a raw `Funky Drummer` in `Nameplate.tsx` left 654 tests
+passing and lint at exit 0.
+
+`inlineWords.test.ts` replaces it, at the repo root because it now reads two
+trees. It walks every `.tsx` under `src/app/` and `src/features/`, rejects JSX
+text, and **rejects every letter-bearing string literal that does not sit in a
+named position** — a structural prop (`className`, `href`, `align`, `tone`,
+`size` and their kind), a font-config key, a module specifier, or a directive
+prologue. An `aria-label`, a `placeholder` and a `metadata.title` are not on
+that list, so they die whether they are written as a quoted string, a template
+literal or `{'…'}`. The nine mutants V1's third verification round left standing
+or killed were re-run against it and all nine die.
+
+**Its blind spot is `.ts`.** A literal there is an identifier — `'kick'`,
+`'steel'` — far more often than a word, so denying by default would be noise.
+A `.ts` file that holds labels and hands them to a component escapes this guard;
+the `reword` project catches it only where a test asserts the label through the
+snippets module.
 
 ## Alternatives considered
 

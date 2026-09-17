@@ -114,6 +114,20 @@ describe('the transport', () => {
 
     expect(pad(panel.tapTempo)).not.toHaveAttribute('aria-pressed')
   })
+
+  it('flashes tap tempo while the finger is down', () => {
+    render(<Panel />)
+
+    expect(pad(panel.tapTempo)).not.toHaveClass('brightness-125')
+
+    fireEvent.pointerDown(pad(panel.tapTempo))
+
+    expect(pad(panel.tapTempo)).toHaveClass('button-steel', 'brightness-125')
+
+    fireEvent.pointerUp(pad(panel.tapTempo))
+
+    expect(pad(panel.tapTempo)).not.toHaveClass('brightness-125')
+  })
 })
 
 describe('the continuous controls', () => {
