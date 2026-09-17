@@ -3,7 +3,7 @@ import type { Groove } from '@/lib/groove/types'
 import type { Articulation } from '@/lib/kit/voices'
 import type { Stage } from '@/lib/pipeline'
 import { CLAMP_BEATS, PIPELINE } from '@/lib/pipeline'
-import { secondsPerBeat } from '@/lib/time/grid'
+import { STRAIGHT_PERCENT, secondsPerBeat } from '@/lib/time/grid'
 import { LOOKAHEAD_SECONDS, TICK_MS, createScheduler } from './scheduler'
 
 const FIXTURE: Groove = {
@@ -32,6 +32,16 @@ const BEAT_HEAD_FIXTURE: Groove = {
   ],
 }
 
+const EVERY_STEP_FIXTURE: Groove = {
+  id: 'every-step',
+  name: 'Every step',
+  tempo: 96,
+  swing: 50,
+  bars: [
+    Array.from({ length: 16 }, (_, step) => ({ step, lane: 'hihat', level: 'normal' }) as const),
+  ],
+}
+
 const STEPS = FIXTURE.bars[0].map((note) => note.step)
 const NOTES_PER_BAR = STEPS.length
 
@@ -48,6 +58,17 @@ const fullNegativeClamp: Stage = (bar) => ({
   ...bar,
   notes: bar.notes.map((note) => ({ ...note, offsetBeats: -CLAMP_BEATS })),
 })
+
+const SWUNG_PERCENT = 66.7
+
+function swingSpy() {
+  const seen: number[] = []
+  const stage: Stage = (bar, ctx) => {
+    seen.push(ctx.swingPercent)
+    return bar
+  }
+  return { seen, stages: [...PIPELINE, zeroOffsets, stage] }
+}
 
 const BEAT_96 = 60 / 96
 const BAR_96 = 4 * BEAT_96
@@ -109,7 +130,7 @@ describe('createScheduler', () => {
   it('plans nothing that lies beyond the lookahead window', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(0.5, 96, 7)
+    scheduler.start(0.5, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
 
     expect(calls).toHaveLength(0)
@@ -118,7 +139,7 @@ describe('createScheduler', () => {
   it('plans a beat that falls inside the window before its time arrives', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(LOOKAHEAD_SECONDS / 2, 96, 7)
+    scheduler.start(LOOKAHEAD_SECONDS / 2, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
 
     expect(calls).toHaveLength(notesInBeats(1))
@@ -127,7 +148,7 @@ describe('createScheduler', () => {
   it('plans one beat at a time as the window reaches each beat line', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
     expect(calls).toHaveLength(notesInBeats(1))
 
@@ -141,7 +162,7 @@ describe('createScheduler', () => {
   it('never plans a beat twice', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
     tickAt(0)
     tickAt(0)
@@ -152,7 +173,7 @@ describe('createScheduler', () => {
   it('never commits a note more than one beat ahead of the clock', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     for (let beat = 0; beat < 40; beat += 1) tickAt(beat * BEAT_96)
 
     expect(calls.length).toBeGreaterThan(30)
@@ -167,7 +188,7 @@ describe('createScheduler', () => {
     const { scheduler, times, tickAt } = harness()
     const start = 1.25
 
-    scheduler.start(start, 96, 7)
+    scheduler.start(start, 96, STRAIGHT_PERCENT, 7)
     tickAt(start + 3 * BAR_96 + BEAT_96)
 
     const step6 = times()[3 * NOTES_PER_BAR + STEPS.indexOf(6)]
@@ -180,7 +201,7 @@ describe('createScheduler', () => {
     const start = 1.25
     const bars = 16
 
-    scheduler.start(start, 96, 7)
+    scheduler.start(start, 96, STRAIGHT_PERCENT, 7)
     for (let beat = 0; beat < bars * 4; beat += 1) tickAt(start + beat * BEAT_96)
 
     const intended = []
@@ -202,7 +223,7 @@ describe('createScheduler', () => {
     const start = 1.25
     const bars = 200
 
-    scheduler.start(start, 100, 7)
+    scheduler.start(start, 100, STRAIGHT_PERCENT, 7)
     for (let beat = 0; beat < bars * 4; beat += 1) tickAt(start + beat * BEAT_100)
 
     const scheduled = times()
@@ -214,12 +235,12 @@ describe('createScheduler', () => {
 
   it('schedules the same times however irregularly it is ticked', () => {
     const steady = harness()
-    steady.scheduler.start(0, 96, 7)
+    steady.scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     for (let at = 0; at <= 12; at += 0.025) steady.tickAt(at)
     steady.tickAt(12)
 
     const jittery = harness()
-    jittery.scheduler.start(0, 96, 7)
+    jittery.scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     for (const at of [0, 0.4, 3.7, 3.71, 3.72, 9.9, 11.99, 12]) {
       jittery.tickAt(at)
     }
@@ -230,7 +251,7 @@ describe('createScheduler', () => {
   it('drops nothing when a tick runs far too late', () => {
     const { scheduler, times, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(20)
 
     const scheduled = times()
@@ -247,7 +268,7 @@ describe('createScheduler', () => {
   it('takes a tempo change at the next beat line, mid-bar, and moves nothing scheduled', () => {
     const { scheduler, calls, times, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
     tickAt(0.6)
 
@@ -269,7 +290,7 @@ describe('createScheduler', () => {
   it('schedules nothing more after stop', () => {
     const { scheduler, calls, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
     const planned = calls.length
 
@@ -282,12 +303,12 @@ describe('createScheduler', () => {
   it('starts a fresh performance after a stop', () => {
     const { scheduler, times, tickAt } = harness()
 
-    scheduler.start(0, 96, 7)
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
     tickAt(0)
     scheduler.stop()
     const firstRun = times().length
 
-    scheduler.start(100, 96, 7)
+    scheduler.start(100, 96, STRAIGHT_PERCENT, 7)
     for (let beat = 0; beat < 4; beat += 1) tickAt(100 + beat * BEAT_96)
 
     expect(times().slice(firstRun)).toEqual(
@@ -298,7 +319,7 @@ describe('createScheduler', () => {
   it('reproduces a performance from the same seed', () => {
     const run = (seed: number) => {
       const { scheduler, calls, tickAt } = harness()
-      scheduler.start(0, 96, seed)
+      scheduler.start(0, 96, STRAIGHT_PERCENT, seed)
       for (let beat = 0; beat < 32; beat += 1) tickAt(beat * BEAT_96)
       return calls
     }
@@ -309,7 +330,7 @@ describe('createScheduler', () => {
   it('varies the variants with the seed and never the times', () => {
     const run = (seed: number) => {
       const { scheduler, calls, tickAt } = harness()
-      scheduler.start(0, 96, seed)
+      scheduler.start(0, 96, STRAIGHT_PERCENT, seed)
       for (let beat = 0; beat < 32; beat += 1) tickAt(beat * BEAT_96)
       return calls
     }
@@ -324,24 +345,26 @@ describe('createScheduler', () => {
   })
 
   for (const tempo of [60, 96, 180]) {
-    it(`keeps at least 75 ms between the call and a note pulled back by the full clamp at ${tempo} BPM`, () => {
-      const { scheduler, calls, tickAt } = harness({
-        groove: BEAT_HEAD_FIXTURE,
-        stages: [...PIPELINE, fullNegativeClamp],
+    for (const swingPercent of [STRAIGHT_PERCENT, SWUNG_PERCENT]) {
+      it(`keeps at least 75 ms between the call and a note pulled back by the full clamp at ${tempo} BPM and ${swingPercent}% swing`, () => {
+        const { scheduler, calls, tickAt } = harness({
+          groove: BEAT_HEAD_FIXTURE,
+          stages: [...PIPELINE, fullNegativeClamp],
+        })
+        const start = 1.25
+        const ticks = Math.ceil((start + 16 * secondsPerBeat(tempo)) / TICK)
+
+        scheduler.start(start, tempo, swingPercent, 7)
+        for (let index = 0; index <= ticks; index += 1) tickAt(index * TICK)
+
+        expect(calls.length).toBeGreaterThanOrEqual(16)
+        for (const call of calls) {
+          const margin = call.time - call.committedAt
+          expect(margin).toBeGreaterThanOrEqual(MIN_MARGIN - EPSILON)
+          expect(margin).toBeLessThanOrEqual(LOOKAHEAD_SECONDS + EPSILON)
+        }
       })
-      const start = 1.25
-      const ticks = Math.ceil((start + 16 * secondsPerBeat(tempo)) / TICK)
-
-      scheduler.start(start, tempo, 7)
-      for (let index = 0; index <= ticks; index += 1) tickAt(index * TICK)
-
-      expect(calls.length).toBeGreaterThanOrEqual(16)
-      for (const call of calls) {
-        const margin = call.time - call.committedAt
-        expect(margin).toBeGreaterThanOrEqual(MIN_MARGIN - EPSILON)
-        expect(margin).toBeLessThanOrEqual(LOOKAHEAD_SECONDS + EPSILON)
-      }
-    })
+    }
   }
 
   it('widens the horizon by a clamp width that is larger in seconds the slower the tempo', () => {
@@ -350,7 +373,7 @@ describe('createScheduler', () => {
       const start = 2 * secondsPerBeat(tempo)
       const { scheduler, calls, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
 
-      scheduler.start(start, tempo, 7)
+      scheduler.start(start, tempo, STRAIGHT_PERCENT, 7)
       let index = 0
       while (calls.length === 0 && index * scan < start) {
         tickAt(index * scan)
@@ -379,7 +402,7 @@ describe('createScheduler', () => {
     const bars = 8
     const ticks = Math.ceil((start + bars * BAR_96) / TICK)
 
-    scheduler.start(start, 96, 7)
+    scheduler.start(start, 96, STRAIGHT_PERCENT, 7)
     for (let index = 0; index <= ticks; index += 1) tickAt(index * TICK)
 
     const intended: number[] = []
@@ -402,7 +425,7 @@ describe('createScheduler', () => {
       const { scheduler, times, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
       const changeAt = call * TICK
 
-      scheduler.start(0, 96, 7)
+      scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
       for (let index = 0; index <= call; index += 1) tickAt(index * TICK)
 
       const before = times().length
@@ -422,5 +445,131 @@ describe('createScheduler', () => {
       expect(trail).toBeGreaterThan(0)
       expect(trail).toBeLessThanOrEqual(bound + EPSILON)
     }
+  })
+
+  it('takes a swing change within one beat of the widened horizon, whenever it is called', () => {
+    const bound = BEAT_96 + LOOKAHEAD_SECONDS + CLAMP_BEATS * BEAT_96
+    const trails: number[] = []
+
+    for (let call = 4; call < 84; call += 1) {
+      const { seen, stages } = swingSpy()
+      const { scheduler, times, tickAt } = harness({
+        groove: BEAT_HEAD_FIXTURE,
+        stages,
+      })
+      const changeAt = call * TICK
+
+      scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
+      for (let index = 0; index <= call; index += 1) tickAt(index * TICK)
+
+      const before = times().length
+      const planned = seen.length
+      scheduler.setSwing(SWUNG_PERCENT)
+      for (let index = call; index <= call + 400; index += 1) tickAt(index * TICK)
+
+      expect(seen.slice(0, planned)).toEqual(
+        seen.slice(0, planned).map(() => STRAIGHT_PERCENT),
+      )
+      expect(seen[planned]).toBe(SWUNG_PERCENT)
+
+      trails.push(times()[before] - changeAt)
+    }
+
+    for (const trail of trails) {
+      expect(trail).toBeGreaterThan(0)
+      expect(trail).toBeLessThanOrEqual(bound + EPSILON)
+    }
+  })
+
+  it('plans every beat with the swing percentage it was started with', () => {
+    const { seen, stages } = swingSpy()
+    const { scheduler, tickAt } = harness({ stages })
+
+    scheduler.start(0, 96, SWUNG_PERCENT, 7)
+    for (let beat = 0; beat < 8; beat += 1) tickAt(beat * BEAT_96)
+
+    expect(seen.length).toBeGreaterThan(4)
+    expect(seen).toEqual(seen.map(() => SWUNG_PERCENT))
+  })
+
+  it('plans with the swing setSwing was given, from the next beat and not before', () => {
+    const { seen, stages } = swingSpy()
+    const { scheduler, calls, tickAt } = harness({ stages })
+
+    scheduler.start(0, 96, STRAIGHT_PERCENT, 7)
+    for (let beat = 0; beat < 3; beat += 1) tickAt(beat * BEAT_96)
+
+    const planned = [...seen]
+    const committed = calls.map((call) => ({ ...call }))
+    expect(planned.length).toBeGreaterThan(0)
+    expect(planned).toEqual(planned.map(() => STRAIGHT_PERCENT))
+
+    scheduler.setSwing(SWUNG_PERCENT)
+    expect(seen).toEqual(planned)
+    expect(calls).toEqual(committed)
+
+    for (let beat = 3; beat < 8; beat += 1) tickAt(beat * BEAT_96)
+
+    const after = seen.slice(planned.length)
+    expect(after.length).toBeGreaterThan(0)
+    expect(after).toEqual(after.map(() => SWUNG_PERCENT))
+  })
+
+  it('moves no beat line when the swing changes', () => {
+    const run = (change: boolean) => {
+      const { scheduler, times, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
+      const start = 1.25
+
+      scheduler.start(start, 100, STRAIGHT_PERCENT, 7)
+      for (let beat = 0; beat < 200; beat += 1) {
+        if (change && beat === 38) scheduler.setSwing(SWUNG_PERCENT)
+        tickAt(start + beat * BEAT_100)
+      }
+      return times()
+    }
+
+    expect(run(true)).toEqual(run(false))
+  })
+
+  it('accumulates no drift over 200 bars when the swing changes mid-performance', () => {
+    const { scheduler, times, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
+    const start = 1.25
+    const bars = 200
+
+    scheduler.start(start, 100, STRAIGHT_PERCENT, 7)
+    for (let beat = 0; beat < bars * 4; beat += 1) {
+      if (beat === 38) scheduler.setSwing(SWUNG_PERCENT)
+      tickAt(start + beat * BEAT_100)
+    }
+
+    const scheduled = times()
+    expect(scheduled[scheduled.length - 1]).toBe(
+      start + 199 * BAR_100 + (12 / 4) * BEAT_100,
+    )
+  })
+
+  it('warps the grid it plays, delaying only the odd steps of a beat', () => {
+    const bar = (swingPercent: number) => {
+      const { scheduler, times, tickAt } = harness({ groove: EVERY_STEP_FIXTURE })
+      const start = 1.25
+
+      scheduler.start(start, 96, swingPercent, 7)
+      for (let beat = 0; beat < 4; beat += 1) tickAt(start + beat * BEAT_96)
+
+      return times().map((time) => time - start)
+    }
+
+    const straight = bar(STRAIGHT_PERCENT)
+    const swung = bar(SWUNG_PERCENT)
+    const pairBeats = 0.5
+    const delay = pairBeats * ((SWUNG_PERCENT - STRAIGHT_PERCENT) / 100) * BEAT_96
+
+    expect(swung).toHaveLength(straight.length)
+    expect(delay).toBeGreaterThan(0)
+
+    straight.forEach((time, step) => {
+      const expected = step % 2 === 0 ? time : time + delay
+      expect(swung[step]).toBeCloseTo(expected, 9)
+    })
   })
 })

@@ -899,14 +899,32 @@ per-voice swing would be a different feature and is not this one.
 and the transport ignores it: it records what the record does, and nothing
 reads it at runtime. Drawing a groove never moves a control the user has set.
 
-**None of this section is built yet, and the app plays dead straight.** V5 built
-`globalTime` and `baseBeat` and left swing to a later stage, so the knob moves a
-number nothing reads and every groove sounds at 50% however it is authored.
-Cissy Strut is a 57% groove and currently is not one. `stepBeats` in
-`src/lib/time/grid.ts` already takes the swing percentage and discards it, so the
-stage that lands fills in a value rather than changing a signature. Swing is
-stated as a **percentage** everywhere — 50 to 66.7, the same unit a groove
-declares — and `STRAIGHT_PERCENT` is 50, not 0.5.
+**This is built, since V7.** Swing is stated as a **percentage** everywhere — 50
+to 66.7, the same unit a groove declares — and `STRAIGHT_PERCENT` is 50, not 0.5.
+
+**It is not a pipeline stage, and V7 decided that against the expectation V5
+recorded.** The warp lives in `src/lib/time/swing.ts` as
+`swungStepBeats(step, swingPercent)`, and `stepBeats` in
+`src/lib/time/grid.ts` — which already took the percentage and discarded it —
+now delegates to it. A stage writing each note's `offsetBeats` would have put
+the same numbers in the same places, and would have made *swing warps the grid*
+a rule each stage has to remember rather than one the code cannot express
+otherwise. Below the pipeline, every voice on a step moves together by
+construction, and `offsetBeats` stays humanize's alone. See
+[ADR 0013](adr/0013-swing-warps-the-grid-below-the-pipeline.md).
+
+**The knob reaches the audio clock the way the tempo knob does.** The scheduler
+holds a live percentage, `start` takes it and `setSwing` replaces it, and a
+change lands **at the next beat line** — the scheduler commits one beat at a
+time, so at most a beat plus the 100 ms lookahead is in flight. Unlike
+`setTempo` it does not re-anchor the performance: swing moves steps 1 and 3
+inside a beat and never moves a beat line, so there is nothing to re-anchor.
+
+Two consequences worth knowing. **The app swings from the moment it starts** —
+the knob rests at 54% and the knob wins, so anyone comparing against a V6
+recording has to put it at 50% first. And **the top of the knob is not exactly a
+triplet**: 66.7% against a true 200/3 is 0.00017 beats, 0.10 ms at 96 BPM, which
+is inaudible and left alone.
 
 The cost is real and worth naming. Cissy Strut is a 57% groove, and at the
 default 54% it will be a little squarer than the record. The alternative was a
@@ -1337,6 +1355,7 @@ has not been written yet, and a row moves up when it lands.
 | Decision | Home |
 | :-- | :-- |
 | Grid, step-to-time conversion | `src/lib/time/grid.ts` |
+| Swing model, the grid warp | `src/lib/time/swing.ts` |
 | Groove grid parser and validator | `src/lib/groove/parse.ts` |
 | Groove library | `src/lib/grooves/` |
 | Which voice and articulation a grid symbol plays | `src/lib/pipeline/stages/baseBeat.ts` |
@@ -1353,14 +1372,15 @@ has not been written yet, and a row moves up when it lands.
 | Not built yet | Where it will go |
 | :-- | :-- |
 | Tap-tempo rule | `src/lib/time/tempo.ts` |
-| Swing model | `src/lib/time/swing.ts` |
 | Fill placement and shape | `src/lib/pipeline/stages/fills.ts` |
 | Feel filter and auto-feel arc | `src/lib/pipeline/stages/feel.ts` |
 | Redistribution rules | `src/lib/pipeline/stages/redistribute.ts` |
 
-Everything in the second table is a pipeline stage, because each one reads a bar
-and returns a bar. When a file lands, move its row up in the same change. A row
-in the first table that names a file that does not exist is worse than no row.
+Everything left in the second table is a pipeline stage, because each one reads a
+bar and returns a bar. **Swing was in that table and was not one** — it warps the
+grid below the pipeline, which is the whole of ADR 0013. When a file lands, move
+its row up in the same change. A row in the first table that names a file that
+does not exist is worse than no row.
 
 ## Open
 

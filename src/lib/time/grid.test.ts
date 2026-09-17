@@ -1,12 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import { STRAIGHT_PERCENT, barSeconds, noteTime, secondsPerBeat, stepBeats } from './grid'
+import { swungStepBeats } from './swing'
 
 const SWING_MIN_PERCENT = 50
 const SWING_MAX_PERCENT = 66.7
 
+const SWUNG_PERCENT = 60
+
 const DRIFT_TEMPO = 110
 const DRIFT_BARS = 1000
 const exactAt110 = (bar: number, step: number) => ((16 * bar + step) * 3) / 22
+
+describe('grid and swing import each other', () => {
+  it('resolves the pair size when grid is the module entered first', () => {
+    expect(swungStepBeats(1, STRAIGHT_PERCENT)).toBe(0.25)
+    expect(swungStepBeats(2, SWING_MAX_PERCENT)).toBe(0.5)
+    expect(stepBeats(1, SWING_MIN_PERCENT)).toBe(0.25)
+  })
+})
 
 describe('secondsPerBeat', () => {
   it('is sixty over the tempo', () => {
@@ -31,6 +42,12 @@ describe('stepBeats', () => {
     expect(stepBeats(6, STRAIGHT_PERCENT)).toBe(1.5)
     expect(stepBeats(15, STRAIGHT_PERCENT)).toBe(3.75)
   })
+
+  it('is the swung grid at a swung percentage', () => {
+    for (let step = 0; step < 16; step += 1) {
+      expect(stepBeats(step, SWUNG_PERCENT)).toBe(swungStepBeats(step, SWUNG_PERCENT))
+    }
+  })
 })
 
 describe('noteTime', () => {
@@ -43,6 +60,25 @@ describe('noteTime', () => {
     expect(noteTime(0, spb, 4, 0, STRAIGHT_PERCENT)).toBe(0.625)
     expect(noteTime(0, spb, 8, 0, STRAIGHT_PERCENT)).toBe(1.25)
     expect(noteTime(0, spb, 12, 0, STRAIGHT_PERCENT)).toBe(1.875)
+  })
+
+  it('carries the warp through to a time', () => {
+    const spb = secondsPerBeat(96)
+    for (let step = 0; step < 16; step += 1) {
+      expect(noteTime(0, spb, step, 0, SWUNG_PERCENT)).toBe(swungStepBeats(step, SWUNG_PERCENT) * spb)
+    }
+  })
+
+  it('moves the e and the a of a swung beat, and nothing else', () => {
+    const spb = secondsPerBeat(96)
+    for (let step = 0; step < 16; step += 2) {
+      expect(noteTime(0, spb, step, 0, SWUNG_PERCENT)).toBe(noteTime(0, spb, step, 0, STRAIGHT_PERCENT))
+    }
+    for (let step = 1; step < 16; step += 2) {
+      expect(noteTime(0, spb, step, 0, SWUNG_PERCENT)).toBeGreaterThan(
+        noteTime(0, spb, step, 0, STRAIGHT_PERCENT),
+      )
+    }
   })
 
   it('keeps the bar line as the origin', () => {

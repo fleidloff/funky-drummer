@@ -1,12 +1,15 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { CLAMP_BEATS } from '@/lib/pipeline'
+import { STRAIGHT_PERCENT } from '@/lib/time/grid'
 import { START_LEAD_SECONDS } from './useTransport'
 import { TICK_MS } from '../lib/scheduler'
 import type { TransportControls } from '../types'
 import { useTransport } from './useTransport'
 
 const TEMPO_FLOOR = 60
+const SWUNG = 62
+const SEED_DRAW = 0.42
 const BEAT_96 = 60 / 96
 const BEAT_120 = 60 / 120
 
@@ -203,6 +206,9 @@ describe('useTransport', () => {
 
   const twoTempoWaves = async (result: { current: TransportControls }) => {
     act(() => {
+      result.current.setSwing(STRAIGHT_PERCENT)
+    })
+    act(() => {
       result.current.togglePlaying()
     })
 
@@ -269,6 +275,55 @@ describe('useTransport', () => {
     )
   })
 
+  const swingRun = async (startAt: number, changeTo: number | null) => {
+    vi.spyOn(Math, 'random').mockReturnValue(SEED_DRAW)
+    const { result, unmount } = await mount()
+
+    act(() => {
+      result.current.setSwing(startAt)
+    })
+    act(() => {
+      result.current.togglePlaying()
+    })
+
+    const firstBeat = waveAfter(() => {
+      void advanceTo(0.05)
+    })
+
+    if (changeTo !== null) {
+      act(() => {
+        result.current.setSwing(changeTo)
+      })
+    }
+
+    const later = waveAfter(() => {
+      for (let beat = 1; beat < 6; beat += 1) void advanceTo(0.05 + beat * BEAT_96)
+    })
+
+    const swing = result.current.state.swing
+    unmount()
+    return { firstBeat, later, swing }
+  }
+
+  it('sends the swing the knob rests at all the way to the audio clock', async () => {
+    const straight = await swingRun(STRAIGHT_PERCENT, null)
+    const swung = await swingRun(SWUNG, null)
+
+    expect(swung.later).toHaveLength(straight.later.length)
+    expect(swung.later).not.toEqual(straight.later)
+    expect(swung.firstBeat).not.toEqual(straight.firstBeat)
+  })
+
+  it('lands a swing change on the next beat and not on the committed one', async () => {
+    const straight = await swingRun(STRAIGHT_PERCENT, null)
+    const changed = await swingRun(STRAIGHT_PERCENT, SWUNG)
+
+    expect(changed.swing).toBe(SWUNG)
+    expect(changed.firstBeat).toEqual(straight.firstBeat)
+    expect(changed.later).toHaveLength(straight.later.length)
+    expect(changed.later).not.toEqual(straight.later)
+  })
+
   it('warns once naming the articulations that have no sample', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     failingPaths = ['/kick/']
@@ -283,7 +338,6 @@ describe('useTransport', () => {
     const { result } = await mount()
 
     act(() => {
-      result.current.setSwing(60)
       result.current.setFeel(0.25)
       result.current.toggleAutoFill()
       result.current.toggleAutoFeel()
@@ -291,7 +345,6 @@ describe('useTransport', () => {
     })
 
     expect(result.current.state).toMatchObject({
-      swing: 60,
       feel: 0.25,
       autoFill: true,
       autoFeel: true,

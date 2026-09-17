@@ -77,6 +77,7 @@ export function useTransport(): TransportControls {
     scheduler.start(
       context.currentTime + START_LEAD_SECONDS,
       state.tempo,
+      state.swing,
       Math.floor(Math.random() * SEED_RANGE),
     )
     timerRef.current = setInterval(() => scheduler.tick(), TICK_MS)
@@ -92,7 +93,10 @@ export function useTransport(): TransportControls {
       schedulerRef.current?.setTempo(value)
       setState((it) => ({ ...it, tempo: value }))
     },
-    setSwing: (value: number) => setState((it) => ({ ...it, swing: value })),
+    setSwing: (value: number) => {
+      schedulerRef.current?.setSwing(value)
+      setState((it) => ({ ...it, swing: value }))
+    },
     setFeel: (value: number) => setState((it) => ({ ...it, feel: value })),
     toggleVoice: (voice: Voice) =>
       setState((it) => ({

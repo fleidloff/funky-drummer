@@ -23,6 +23,12 @@ corrected mid-design: swing belongs in it too, and the membership is still open.
 A design that has to be edited when the list changes is a design that will be
 edited eight times.
 
+**Amended by V7: swing does not belong in it.** It warps the grid below the
+pipeline and `PIPELINE` did not change when it landed — see
+[ADR 0013](0013-swing-warps-the-grid-below-the-pipeline.md). The membership being
+open is what let that be discovered rather than designed around, so the argument
+of this record stands; only the example was wrong.
+
 ## Decision
 
 **Every stage has the same signature, and the pipeline is an ordered array of
@@ -50,9 +56,11 @@ of it lives in `src/lib/pipeline/` under the purity bar that
 
 ## Consequences
 
-**A later stage costs a file.** Swing, humanize, fills and Feel each become one
-module and one array entry, and none of them requires touching `run.ts`,
-`globalTime` or `baseBeat`.
+**A later stage costs a file.** Humanize, fills and Feel each become one module
+and one array entry, and none of them requires touching `run.ts`, `globalTime`
+or `baseBeat`. Velocity and humanize proved it in V6, which appended two stages
+and edited none. Swing was on this list and came off it in V7
+([ADR 0013](0013-swing-warps-the-grid-below-the-pipeline.md)).
 
 **The seam is tested rather than asserted.** `pipeline.test.ts` splices a
 recording probe into the real array at every insertion point and checks it

@@ -1,3 +1,5 @@
+import { swungStepBeats } from './swing'
+
 export const STRAIGHT_PERCENT = 50
 
 export const BEATS_PER_BAR = 4
@@ -12,8 +14,7 @@ export function barSeconds(tempo: number): number {
 }
 
 export function stepBeats(step: number, swingPercent: number): number {
-  void swingPercent
-  return step / STEPS_PER_BEAT
+  return swungStepBeats(step, swingPercent)
 }
 
 export function noteTime(

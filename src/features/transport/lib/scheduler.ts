@@ -4,7 +4,6 @@ import { CLAMP_BEATS, PIPELINE, runBar, variantFor } from '@/lib/pipeline'
 import {
   BEATS_PER_BAR,
   STEPS_PER_BEAT,
-  STRAIGHT_PERCENT,
   noteTime,
   secondsPerBeat,
 } from '@/lib/time/grid'
@@ -24,10 +23,16 @@ export type SchedulerDeps = {
 }
 
 export type Scheduler = {
-  start: (startTime: number, tempo: number, seed: number) => void
+  start: (
+    startTime: number,
+    tempo: number,
+    swingPercent: number,
+    seed: number,
+  ) => void
   stop: () => void
   tick: () => void
   setTempo: (tempo: number) => void
+  setSwing: (swingPercent: number) => void
 }
 
 export function createScheduler(
@@ -38,6 +43,7 @@ export function createScheduler(
 
   let running = false
   let tempo = 0
+  let swing = 0
   let seed = 0
   let startTime = 0
   let startBeat = 0
@@ -53,7 +59,7 @@ export function createScheduler(
     const bar = runBar(stages, index, {
       groove,
       tempo,
-      swingPercent: STRAIGHT_PERCENT,
+      swingPercent: swing,
       feel: FEEL,
       seed,
       startTime,
@@ -74,7 +80,7 @@ export function createScheduler(
           time.secondsPerBeat,
           note.step,
           note.offsetBeats,
-          STRAIGHT_PERCENT,
+          swing,
         ),
         variantFor(seed, index, note.step, note.lane),
       )
@@ -82,11 +88,12 @@ export function createScheduler(
   }
 
   return {
-    start: (at, bpm, performanceSeed) => {
+    start: (at, bpm, swingPercent, performanceSeed) => {
       running = true
       startTime = at
       startBeat = 0
       tempo = bpm
+      swing = swingPercent
       seed = performanceSeed
       nextBeat = 0
     },
@@ -99,6 +106,10 @@ export function createScheduler(
       startTime = beatLine(nextBeat)
       startBeat = nextBeat
       tempo = bpm
+    },
+
+    setSwing: (swingPercent) => {
+      swing = swingPercent
     },
 
     tick: () => {

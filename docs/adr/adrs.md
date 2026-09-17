@@ -23,3 +23,4 @@ record is edited to ⛔ **Superseded by**. Nothing here is deleted.
 | [0010](0010-the-lookahead-covers-what-the-pipeline-can-do-to-a-note.md) | The lookahead covers what the pipeline can do to a note's time | ✅ Accepted | 2026-09-17 |
 | [0011](0011-a-note-carries-its-level-and-velocity-stops-identifying-it.md) | A note carries its authored level, and velocity stops identifying it | ✅ Accepted | 2026-09-17 |
 | [0012](0012-humanize-models-one-drummer-not-an-ensemble.md) | Humanize models one drummer's scatter, not an ensemble's | ✅ Accepted | 2026-09-17 |
+| [0013](0013-swing-warps-the-grid-below-the-pipeline.md) | Swing warps the grid, below the pipeline | ✅ Accepted | 2026-09-17 |
