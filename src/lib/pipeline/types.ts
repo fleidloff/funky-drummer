@@ -1,9 +1,10 @@
 import type { Articulation, Voice } from '@/lib/kit/voices'
-import type { Groove, Lane } from '@/lib/groove/types'
+import type { Groove, Lane, Level } from '@/lib/groove/types'
 
 export type Note = {
   readonly step: number
   readonly lane: Lane
+  readonly level: Level
   readonly voice: Voice
   readonly articulation: Articulation
   readonly velocity: number

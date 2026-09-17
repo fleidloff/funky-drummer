@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { Groove } from '@/lib/groove/types'
 import type { Articulation } from '@/lib/kit/voices'
-import { LOOKAHEAD_SECONDS, createScheduler } from './scheduler'
+import type { Stage } from '@/lib/pipeline'
+import { CLAMP_BEATS, PIPELINE } from '@/lib/pipeline'
+import { secondsPerBeat } from '@/lib/time/grid'
+import { LOOKAHEAD_SECONDS, TICK_MS, createScheduler } from './scheduler'
 
 const FIXTURE: Groove = {
   id: 'fixture',
@@ -19,8 +22,32 @@ const FIXTURE: Groove = {
   ],
 }
 
+const BEAT_HEAD_FIXTURE: Groove = {
+  id: 'beat-heads',
+  name: 'Beat heads',
+  tempo: 96,
+  swing: 50,
+  bars: [
+    [0, 4, 8, 12].map((step) => ({ step, lane: 'kick', level: 'anchor' }) as const),
+  ],
+}
+
 const STEPS = FIXTURE.bars[0].map((note) => note.step)
 const NOTES_PER_BAR = STEPS.length
+
+const TICK = TICK_MS / 1000
+const MIN_MARGIN = LOOKAHEAD_SECONDS - TICK
+const EPSILON = 1e-9
+
+const zeroOffsets: Stage = (bar) => ({
+  ...bar,
+  notes: bar.notes.map((note) => ({ ...note, offsetBeats: 0 })),
+})
+
+const fullNegativeClamp: Stage = (bar) => ({
+  ...bar,
+  notes: bar.notes.map((note) => ({ ...note, offsetBeats: -CLAMP_BEATS })),
+})
 
 const BEAT_96 = 60 / 96
 const BAR_96 = 4 * BEAT_96
@@ -50,15 +77,21 @@ const notesInBeats = (beats: number) => {
   return total
 }
 
-function harness() {
+type HarnessOptions = {
+  readonly groove?: Groove
+  readonly stages?: readonly Stage[]
+}
+
+function harness(options: HarnessOptions = {}) {
   let now = 0
   const calls: Call[] = []
 
-  const scheduler = createScheduler(FIXTURE, {
+  const scheduler = createScheduler(options.groove ?? FIXTURE, {
     clock: () => now,
     play: (articulation, velocity, time, variant) => {
       calls.push({ articulation, velocity, time, variant, committedAt: now })
     },
+    stages: options.stages ?? [...PIPELINE, zeroOffsets],
   })
 
   return {
@@ -201,7 +234,9 @@ describe('createScheduler', () => {
     tickAt(20)
 
     const scheduled = times()
-    const planned = Math.ceil((20 + LOOKAHEAD_SECONDS) / BEAT_96)
+    const planned = Math.ceil(
+      (20 + LOOKAHEAD_SECONDS + CLAMP_BEATS * BEAT_96) / BEAT_96,
+    )
 
     expect(scheduled).toHaveLength(notesInBeats(planned))
     for (let index = 1; index < scheduled.length; index += 1) {
@@ -288,4 +323,104 @@ describe('createScheduler', () => {
     )
   })
 
+  for (const tempo of [60, 96, 180]) {
+    it(`keeps at least 75 ms between the call and a note pulled back by the full clamp at ${tempo} BPM`, () => {
+      const { scheduler, calls, tickAt } = harness({
+        groove: BEAT_HEAD_FIXTURE,
+        stages: [...PIPELINE, fullNegativeClamp],
+      })
+      const start = 1.25
+      const ticks = Math.ceil((start + 16 * secondsPerBeat(tempo)) / TICK)
+
+      scheduler.start(start, tempo, 7)
+      for (let index = 0; index <= ticks; index += 1) tickAt(index * TICK)
+
+      expect(calls.length).toBeGreaterThanOrEqual(16)
+      for (const call of calls) {
+        const margin = call.time - call.committedAt
+        expect(margin).toBeGreaterThanOrEqual(MIN_MARGIN - EPSILON)
+        expect(margin).toBeLessThanOrEqual(LOOKAHEAD_SECONDS + EPSILON)
+      }
+    })
+  }
+
+  it('widens the horizon by a clamp width that is larger in seconds the slower the tempo', () => {
+    const extraHorizon = (tempo: number) => {
+      const scan = 1e-4
+      const start = 2 * secondsPerBeat(tempo)
+      const { scheduler, calls, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
+
+      scheduler.start(start, tempo, 7)
+      let index = 0
+      while (calls.length === 0 && index * scan < start) {
+        tickAt(index * scan)
+        index += 1
+      }
+
+      expect(calls.length).toBeGreaterThan(0)
+      return start - calls[0].committedAt - LOOKAHEAD_SECONDS
+    }
+
+    const slow = extraHorizon(60)
+    const fast = extraHorizon(180)
+
+    expect(slow).toBeCloseTo(CLAMP_BEATS * secondsPerBeat(60), 3)
+    expect(fast).toBeCloseTo(CLAMP_BEATS * secondsPerBeat(180), 3)
+    expect(slow - fast).toBeCloseTo(
+      CLAMP_BEATS * (secondsPerBeat(60) - secondsPerBeat(180)),
+      3,
+    )
+    expect(slow).toBeGreaterThan(fast)
+  })
+
+  it('plans every beat exactly once and in order when ticked at the tick rate', () => {
+    const { scheduler, times, tickAt } = harness()
+    const start = 1.25
+    const bars = 8
+    const ticks = Math.ceil((start + bars * BAR_96) / TICK)
+
+    scheduler.start(start, 96, 7)
+    for (let index = 0; index <= ticks; index += 1) tickAt(index * TICK)
+
+    const intended: number[] = []
+    for (let bar = 0; bar < bars; bar += 1) {
+      for (const step of STEPS) intended.push(start + bar * BAR_96 + step * STEP_96)
+    }
+
+    const scheduled = times().slice(0, intended.length)
+    expect(scheduled).toHaveLength(intended.length)
+    for (const [index, want] of intended.entries()) {
+      expect(scheduled[index]).toBeCloseTo(want, 9)
+    }
+  })
+
+  it('takes a tempo change within one beat of the widened horizon, whenever it is called', () => {
+    const bound = BEAT_96 + LOOKAHEAD_SECONDS + CLAMP_BEATS * BEAT_96
+    const trails: number[] = []
+
+    for (let call = 4; call < 84; call += 1) {
+      const { scheduler, times, tickAt } = harness({ groove: BEAT_HEAD_FIXTURE })
+      const changeAt = call * TICK
+
+      scheduler.start(0, 96, 7)
+      for (let index = 0; index <= call; index += 1) tickAt(index * TICK)
+
+      const before = times().length
+      scheduler.setTempo(60)
+      for (let index = call; index <= call + 400; index += 1) tickAt(index * TICK)
+
+      const anchor = times()[before - 1] + BEAT_96
+      expect(times()[before]).toBeCloseTo(anchor, 9)
+      expect(times()[before + 1] - times()[before]).toBeCloseTo(
+        secondsPerBeat(60),
+        9,
+      )
+      trails.push(anchor - changeAt)
+    }
+
+    for (const trail of trails) {
+      expect(trail).toBeGreaterThan(0)
+      expect(trail).toBeLessThanOrEqual(bound + EPSILON)
+    }
+  })
 })

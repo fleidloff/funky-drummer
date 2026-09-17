@@ -119,6 +119,29 @@ describe('the lane and level table', () => {
   })
 })
 
+describe('the note carries its level', () => {
+  it.each(LEVELS)('keeps a %s note at that level', (level) => {
+    for (const lane of LANES) {
+      expect(playOne(grid(lane, level)).level).toBe(level)
+    }
+  })
+
+  it('keeps the level the flags do not change', () => {
+    expect(playOne(grid('hihat', 'ghost', 0, { open: true })).level).toBe(
+      'ghost',
+    )
+    expect(playOne(grid('ride', 'anchor', 0, { bell: true })).level).toBe(
+      'anchor',
+    )
+  })
+
+  it('carries a level for every note of a bar, not only the first', () => {
+    const bar = LEVELS.map((level, step) => grid('snare', level, step))
+    const notes = baseBeat(barOf(0), contextOf(grooveOf(bar))).notes
+    expect(notes.map((note) => note.level)).toEqual([...LEVELS])
+  })
+})
+
 describe('the flags', () => {
   it.each(LEVELS)('open beats the level on a %s hihat', (level) => {
     const note = playOne(grid('hihat', level, 0, { open: true }))
@@ -202,6 +225,7 @@ describe('the shape of the bar', () => {
         {
           step: 15,
           lane: 'crash',
+          level: 'normal',
           voice: 'crash',
           articulation: 'crash.hit',
           velocity: 0.5,
@@ -264,6 +288,16 @@ describe('purity', () => {
   })
 })
 
+const SEEDS: readonly number[] = [0, 7, 12345]
+
+const PINNED_VARIANTS: readonly number[] = [
+  906348468, 3311250768, 545411467, 298794097, 1461344524, 3013779561,
+  897015060, 3932309590, 2685075123, 1627348041, 2272086492, 2563416832,
+  53894109, 2798655146, 2798639270, 4269420228, 434816737, 897970375,
+  708554995, 2989350678, 598452776, 1906692350, 3950923261, 423200104,
+  107381020, 2650533726, 2819080301,
+]
+
 describe('variantFor', () => {
   it('is a non-negative integer', () => {
     for (let step = 0; step < 16; step += 1) {
@@ -325,6 +359,13 @@ describe('variantFor', () => {
     ])
     expect(pairs.some(([snare, hihat]) => snare !== hihat)).toBe(true)
     expect(pairs.some(([snare, hihat]) => snare === hihat)).toBe(true)
+  })
+
+  it('is unchanged by moving the hash into src/lib/random', () => {
+    const drawn = SEEDS.flatMap((seed) =>
+      LANES.map((lane) => variantFor(seed, 3, 9, lane)),
+    )
+    expect(drawn).toEqual(PINNED_VARIANTS)
   })
 
   it('spreads three files over a long run of one ghost note', () => {

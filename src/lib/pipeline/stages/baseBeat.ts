@@ -2,6 +2,7 @@ import type { GridNote, Lane, Level } from '@/lib/groove/types'
 import { LANES } from '@/lib/groove/types'
 import type { Articulation } from '@/lib/kit/voices'
 import { voiceOf } from '@/lib/kit/voices'
+import { hashOf } from '@/lib/random/hash'
 import type { Bar, BarContext, Note, Stage } from '../types'
 
 const VELOCITY: Record<Level, number> = {
@@ -53,26 +54,13 @@ function articulationOf(note: GridNote): Articulation {
   return ARTICULATION[note.lane][note.level]
 }
 
-const MIX_PRIME = 0x9e3779b1
-
-function mix32(value: number): number {
-  let hash = Math.imul(value, MIX_PRIME)
-  hash = Math.imul(hash ^ (hash >>> 16), 0x85ebca6b)
-  hash = Math.imul(hash ^ (hash >>> 13), 0xc2b2ae35)
-  return hash ^ (hash >>> 16)
-}
-
 export function variantFor(
   seed: number,
   barIndex: number,
   step: number,
   lane: Lane,
 ): number {
-  let hash = mix32(seed)
-  hash = mix32(hash ^ barIndex)
-  hash = mix32(hash ^ step)
-  hash = mix32(hash ^ LANES.indexOf(lane))
-  return hash >>> 0
+  return hashOf(seed, barIndex, step, LANES.indexOf(lane))
 }
 
 function noteOf(source: GridNote): Note {
@@ -80,6 +68,7 @@ function noteOf(source: GridNote): Note {
   return {
     step: source.step,
     lane: source.lane,
+    level: source.level,
     voice: voiceOf(articulation),
     articulation,
     velocity: VELOCITY[source.level],

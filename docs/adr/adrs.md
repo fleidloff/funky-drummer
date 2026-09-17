@@ -19,3 +19,7 @@ record is edited to ⛔ **Superseded by**. Nothing here is deleted.
 | [0006](0006-the-kit-ships-as-ogg-vorbis-only.md) | The kit ships as Ogg Vorbis only | ✅ Accepted | 2026-09-16 |
 | [0007](0007-the-drummer-is-a-pipeline-of-same-signature-stages.md) | The drummer is a pipeline of same-signature stages | ✅ Accepted | 2026-09-17 |
 | [0008](0008-the-drummer-is-domain-the-transport-is-a-slice.md) | The drummer is domain, the transport is a slice, the route joins them | ✅ Accepted | 2026-09-17 |
+| [0009](0009-every-random-decision-is-a-hash-of-its-coordinates.md) | Every random decision is a hash of its coordinates, never a stream | ✅ Accepted | 2026-09-17 |
+| [0010](0010-the-lookahead-covers-what-the-pipeline-can-do-to-a-note.md) | The lookahead covers what the pipeline can do to a note's time | ✅ Accepted | 2026-09-17 |
+| [0011](0011-a-note-carries-its-level-and-velocity-stops-identifying-it.md) | A note carries its authored level, and velocity stops identifying it | ✅ Accepted | 2026-09-17 |
+| [0012](0012-humanize-models-one-drummer-not-an-ensemble.md) | Humanize models one drummer's scatter, not an ensemble's | ✅ Accepted | 2026-09-17 |

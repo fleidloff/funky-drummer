@@ -8,7 +8,7 @@ import type {
 } from '@/lib/groove/types'
 import { BEATS_PER_BAR, barSeconds, secondsPerBeat } from '@/lib/time/grid'
 import type { Bar, BarContext, Note, Stage } from './index'
-import { PIPELINE, runBar } from './index'
+import { CLAMP_BEATS, PIPELINE, runBar } from './index'
 import { globalTime } from './stages/globalTime'
 
 const gridNote = (step: number, lane: Lane, level: Level): GridNote => ({
@@ -66,6 +66,7 @@ describe('the seam a later stage drops into', () => {
   const MARKER: Note = {
     step: 11,
     lane: 'crash',
+    level: 'accent',
     voice: 'crash',
     articulation: 'crash.hit',
     velocity: 0.42,
@@ -258,6 +259,7 @@ describe('globalTime', () => {
       {
         step: 4,
         lane: 'snare',
+        level: 'anchor',
         voice: 'snare',
         articulation: 'snare.backbeat',
         velocity: 1,
@@ -392,5 +394,41 @@ describe('the whole pipeline', () => {
       expect(note.velocity).toBeLessThanOrEqual(1)
       expect(Number.isFinite(note.offsetBeats)).toBe(true)
     }
+  })
+
+  it('displaces notes off the grid, inside the clamp', () => {
+    const offsets = []
+    for (let index = 0; index < 32; index += 1) {
+      for (const note of runBar(PIPELINE, index, ctx).notes) {
+        offsets.push(note.offsetBeats)
+      }
+    }
+
+    expect(offsets.length).toBeGreaterThan(0)
+    expect(offsets.some((offset) => offset !== 0)).toBe(true)
+    expect(offsets.some((offset) => offset > 0)).toBe(true)
+    expect(offsets.some((offset) => offset < 0)).toBe(true)
+    for (const offset of offsets) {
+      expect(Math.abs(offset)).toBeLessThanOrEqual(CLAMP_BEATS)
+    }
+  })
+
+  it('shapes velocity across the phrase and leaves the anchors alone', () => {
+    const at = (index: number) =>
+      new Map(runBar(PIPELINE, index, ctx).notes.map((n) => [n.step, n]))
+
+    const early = at(0)
+    const later = at(2)
+
+    const anchors = [...early.values()].filter((n) => n.level === 'anchor')
+    expect(anchors.length).toBeGreaterThan(0)
+    for (const anchor of anchors) {
+      expect(later.get(anchor.step)?.velocity).toBe(anchor.velocity)
+    }
+
+    const shaped = [...early.values()].filter(
+      (n) => n.level !== 'anchor' && later.get(n.step)?.velocity !== n.velocity,
+    )
+    expect(shaped.length).toBeGreaterThan(0)
   })
 })

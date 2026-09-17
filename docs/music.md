@@ -950,17 +950,116 @@ two sound levels it is built on.
 
 ### Velocity curves
 
-Two multiplicative curves, both applied on top of the level.
+Two multiplicative curves, both applied on top of the level. Both are computed
+for every step and every bar; the stage skips the exempt notes, so neither
+function needs to know that an exemption exists.
 
 **Per bar.** A shallow arc that lifts the middle of the bar and settles into the
 One. Range **0.92–1.05**. It is small on purpose: this is breathing, not a
 crescendo.
 
-**Per four bars.** A longer arc across the phrase, building to bar 4 and
-dropping back for bar 1 of the next phrase. Range **0.90–1.08**.
+```
+barCurve(step) = 0.92 + 0.13 × sin(π × step / 16)
+```
 
-Backbeats and beat-1 kicks are exempt from both. The anchors stay anchored; the
-curves shape everything around them.
+| step | 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| `barCurve` | 0.9200 | 0.9454 | 0.9697 | 0.9922 | 1.0119 | 1.0281 | 1.0401 | 1.0475 |
+
+| step | 8 | 9 | 10 | 11 | 12 | 13 | 14 | 15 |
+| :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- | :-- |
+| `barCurve` | 1.0500 | 1.0475 | 1.0401 | 1.0281 | 1.0119 | 0.9922 | 0.9697 | 0.9454 |
+
+**One arc across the bar, not a shape repeated per beat.** A per-beat shape
+would be a second accent pattern laid over the one the groove already declares,
+and `#`, `X` and `x` are where accents are decided. The curve owns the bar's
+shape; the notation owns its accents.
+
+**Both ends are reached, each at exactly one step.** 0.92 is at **step 0** and
+nowhere else; 1.05 is at **step 8** and nowhere else. The arc is symmetric about
+its peak: `barCurve(s) = barCurve(16 − s)` for every `s` from 1 to 15.
+
+**The floor sits on the One, and that is the point.** Anchors are exempt, so on
+step 0 the beat-1 kick and an anchor snare stay at their level value while
+everything else sharing that step — the hi-hat, the shaker, a cowbell — comes
+down 8%. The curve widens the gap the One arrives through instead of adding to
+it. From step 8 the arc then descends for the whole second half of the bar and
+lands on that floor, and that descent is what "settles into the One" means.
+
+**The arc cannot manufacture an accent.** The largest change between two
+neighbouring steps is 0.0254, between step 15 and step 0 of the next bar — 2.8%.
+The gap the ear reads as an accent is the one in the level table, 0.85 against
+0.65, which is 31%. The curve moves everything by an order of magnitude less
+than that, which is the whole content of "breathing, not a crescendo".
+
+**Averaged over the sixteen steps the multiplier is 1.002**, within 0.3% of
+unity. The arc redistributes level inside the bar rather than raising the bar.
+
+**Per four bars.** A longer arc across the phrase, building to bar 4 and
+dropping back for bar 1 of the next phrase. Range **0.90–1.08**. Four explicit
+values:
+
+| barIndex | 0 | 1 | 2 | 3 |
+| :-- | :-- | :-- | :-- | :-- |
+| `phraseCurve` | 0.90 | 0.98 | 1.04 | 1.08 |
+
+A table rather than a closed form, because no single sinusoid fits. The minimum
+and the maximum are three bars apart in a four-bar period, and a sinusoid puts
+them two apart. Four numbers are small enough to write down.
+
+0.90 is at **barIndex 0** and 1.08 at **barIndex 3**. The mean of the four is
+exactly 1.000, so the phrase, like the bar, redistributes rather than lifts.
+
+**The increments shrink — 0.08, 0.06, 0.04 — and the drop back is 0.18.** The
+biggest move in the phrase is the reset at the phrase line, not the build into
+bar 4, and there are two reasons to spend the travel there. A build into bar 4
+as steep as the reset reads as a crescendo, which this is not. And bar 4 is
+where a fill will go once `fills.ts` lands: a fill is busier and carries its own
+accents, so it raises bar 4 on its own. Leaving the last increment the smallest
+leaves it the room.
+
+**What the four-bar curve is indexed from.** `phraseCurve(barIndex % 4)`, with
+`barIndex` counted from 0 at Play. **This is a placeholder** — correct today, and
+the wrong home for the number the moment fills land.
+
+It is not arbitrary. The seed is drawn on Play and `barIndex` counts from there,
+so the phrase starts where the performance starts, which is what a drummer
+counting in does. And a groove is one or two bars, so four bars is a whole
+number of passes either way and the phrase line never falls inside a groove.
+
+What makes it a placeholder is that fill placement will need the same phrase
+position. Two stages each computing `barIndex % 4` is two places to change on
+the day the phrase stops starting at bar 0. When `fills.ts` lands it brings the
+phrase position with it — an offset from the performance start, and later a
+reset when a fill is played out of turn — and `velocity.ts` reads that instead
+of recomputing the modulo. Until then the modulo lives in `velocity.ts` and
+nothing else reads it.
+
+**What is exempt: every note at level `anchor`**, which is the `#` symbol. It
+passes through both curves untouched, at exactly its level value of 1.00. The
+anchors stay anchored; the curves shape everything around them.
+
+**Why the exemption is the level rather than "backbeats and beat-1 kicks".**
+This section used to say the narrower thing, and the library breaks it. Four On
+The Floor Funk anchors the kick on all four quarters, so steps 4, 8 and 12 carry
+level `anchor` away from beat 1. Curving those would be wrong twice over. It
+would make the four kicks of a four-on-the-floor uneven, which is the one thing
+that figure cannot be. And 1.00 × 1.05 × 1.08 = 1.134 would push a velocity past
+1.0, which `## What must never change` forbids. `#` means the author fixed that
+note, and scaling it is moving it.
+
+**Headroom.** With every anchor exempt, the highest level a curve touches is
+accent, 0.85. The two maxima can co-occur — step 8 of bar 4 — so the largest
+velocity this stage can emit is
+
+```
+0.85 × 1.05 × 1.08 = 0.9639
+```
+
+reached rather than merely bounded, and under 1.0 with 3.6% to spare. Velocity
+stays normalized 0–1 before the voice gain. At the other end a ghost note on the
+One of bar 1 is 0.30 × 0.92 × 0.90 = **0.2484** — 17% under its level value, and
+still the ghost layer rather than a quiet backbeat.
 
 ## Humanize
 
@@ -968,38 +1067,97 @@ A symmetric timing spread, applied per note, in two correlated parts.
 
 | | Value |
 | :-- | :-- |
-| Per-step deviation | σ = 0.024 beats, shared by every voice on that step |
-| Per-voice deviation | σ = 0.010 beats, independent |
-| Combined | σ = 0.026 beats |
-| Hard clamp | ±0.065 beats on the total |
+| Per-step deviation | σ = 0.0075 beats, shared by every voice on that step |
+| Per-voice deviation | σ = 0.0030 beats, independent |
+| Combined | σ = 0.0081 beats before the clamp, 0.0081 delivered |
+| Hard clamp | ±0.024 beats on the total |
 | Per-voice bias | 0.000 beats for every voice |
 
 **Expressed in beats, not milliseconds**, so it scales with tempo. At 96 BPM the
-combined σ is about 16 ms and the clamp about 41 ms.
+combined σ is 5.0 ms and the clamp exactly 15.0 ms. At the 60 BPM floor they are
+8.1 ms and 24.0 ms; at 125 BPM, 3.9 ms and 11.5 ms.
 
-The 0.026 figure is the tempo-adjusted standard timing deviation measured from
-an expert funk rhythm-section performance. The same body of work found groove
-ratings hold from fully quantized up to about 20% beyond the performed
-deviation, and fall past that — so the clamp is a ceiling, not a target.
+**The model and the delivery now agree.** The clamp truncates the tails, so the
+delivered spread is narrower than √(0.0075² + 0.0030²). At a clamp of 2.97 σ that
+narrowing is 0.3% — 0.00808 modelled against 0.00806 delivered, which rounds to
+the same 0.0081 — and 0.30% of draws land on the boundary. V6's clamp sat at
+2.5 σ and cost 1.2%: it measured 0.02572 over 128 000 draws against a modelled
+0.026, with 1.23% on the boundary. The sigmas are not raised to compensate,
+because the clamp is a ceiling rather than a target.
+
+### The clamp is derived, and the sigmas follow it
+
+The binding constraint is the 16–30 ms window in *Microtiming: measured, not
+assumed*. Below it a displacement reads as human; inside it a listener starts
+reading it as a pushed or laid-back **choice**. Humanize must never make that
+choice — *Why every bias is zero* is that argument applied to the mean, and this
+is the same argument applied to the spread.
+
+So the clamp is set first, at **0.024 beats, 15.0 ms at 96 BPM** — just inside
+the threshold. At 96 BPM and above, no note the model can produce reaches the
+intent window at all. The sigmas then follow from it: σ = clamp / 3 makes the
+clamp a ceiling rather than a shaper, leaving the distribution Gaussian
+everywhere it is heard. 0.0075 and 0.0030 combine to 0.00808, which is that
+third to within 1%.
+
+At the 60 BPM floor the clamp is 24 ms and sits inside the window, and 4.8% of
+notes pass 16 ms. That is the model tracking the beat rather than the
+millisecond, which is right rather than a compromise: slow tempi are where a
+human player is loosest.
+
+### Why 0.026 beats was the wrong number
+
+V6 shipped σ = 0.026 beats with a ±0.065 clamp — **16 ms and 41 ms at 96 BPM**.
+That put σ itself *on* the intent threshold and the clamp at two and a half times
+it: 32% of all notes landed at or past 16 ms, with a mean displacement of
+13 ms. A third of every bar was therefore being played as intent rather than as
+a human tolerance, which is not what humanize is for.
+
+The figure was misapplied rather than mismeasured. **0.026 beats is a
+rhythm-section quantity** — the standard deviation of onsets against the grid
+pooled across the players of an ensemble. It contains two things added in
+quadrature: the systematic offset each instrument sits at, and each player's own
+stroke-to-stroke scatter. *Microtiming: measured, not assumed* records the first
+component directly — hi-hat −3 ms, snare −4 ms, bass −3 ms, bass drum −12.5 ms —
+which is several milliseconds of spread on its own.
+
+This app sets every one of those systematic offsets to zero on purpose. What is
+left for humanize to model is the second component alone: one drummer's
+stroke-to-stroke scatter. Using the pooled figure for it double-counts a
+between-player spread that *Why every bias is zero* has already removed.
+
+**No published figure for the within-player component is on hand, so 0.0081 is
+not a measurement.** It is derived from the perceptual threshold above, which is.
+That is the honest status of the number, and it is why the magnitude sits in
+`## Open` awaiting an ear while the reasoning that killed 0.026 sits in
+`## Closed`.
 
 ### Why it is split in two
 
-A single independent draw per note at σ = 0.026 would be wrong, and the reason
-is anatomy rather than taste. **One drummer has one body.** When the kick and
-the hi-hat land on the same step, a player puts them within a couple of
-milliseconds of each other, because the limbs are driven by one internal pulse.
-Drawing them independently at 16 ms apiece would separate them by 23 ms on
-average, which is past the 16–30 ms window where a listener starts hearing
-displacement as deliberate. The groove would not sound humanized; it would
-sound like a flam on every downbeat, played by two drummers who are not getting
-on.
+A single independent draw per note would be wrong, and the reason is anatomy
+rather than taste. **One drummer has one body.** When the kick and the hi-hat
+land on the same step, a player puts them within a couple of milliseconds of
+each other, because the limbs are driven by one internal pulse. So the step gets
+one offset and each voice gets a small one of its own on top.
 
-So the step gets one offset and the voices get a small one of their own. The
-kick and hat on beat 1 land about 8 ms apart, which reads as one player, and the
-bar still never repeats.
+The split holds a pair on one step at **σ = √2 × 0.0030 = 0.0042 beats, 2.7 ms
+at 96 BPM and 2.1 ms on average**, while the pair as a whole sits 4.0 ms off the
+grid on average. Two voices on a step are about twice as close to each other as
+either is to the beat, and 2 ms is exactly the figure the paragraph above claims
+for a real player's limbs.
 
-This is the whole of what the split buys, and it is a structural argument rather
-than a preference. The measured σ is unchanged: √(0.024² + 0.010²) = 0.026.
+**The V6 version of this argument no longer holds and must not be quoted back.**
+It said independent draws would separate a kick and hat by 18 ms, past the
+16–30 ms window, and flam every downbeat. At the new magnitude independent draws
+separate them by 5.7 ms on average, which is nowhere near that window. What
+6 ms of separation does instead is smear the transient: two drum attacks that
+far apart read as one thickened, softened hit rather than one stroke. The split
+is what keeps a simultaneous kick and hat crisp on the front.
+
+So the structural argument is untouched and the perceptual one is smaller than
+it was. Both still point the same way, and the 2.5-to-1 ratio between the two
+components carries over from V6 unaltered. The combined σ is
+√(0.0075² + 0.0030²) = 0.0081.
 
 ### Why every bias is zero
 
@@ -1027,6 +1185,21 @@ This is measured, not invented. The "Funky Drummer" fill at bars 31–32 goes fr
 56 ms to 4 ms of deviation across seven sixteenths — a delay-and-accelerate that
 lands exactly on the One. Converted to beats at that record's 94 BPM, that is
 0.088 down to 0.006.
+
+**These numbers do not move with the humanize shrink, and the widened gap is the
+point.** A fill's displacement is the one place in the app where timing is
+deliberate, so the 16–30 ms window is a target there rather than a ceiling:
+0.09 beats is 56 ms at 96 BPM, comfortably inside it. Against a groove σ of
+0.0081 a fill's first note now starts 11 σ off the grid where under V6 it was
+3.5 σ. It was the old ratio that was broken — the one deliberate gesture in the
+app barely stood out of the noise it exists to resolve.
+
+Two consequences for whoever builds `fills.ts`. The converging offset is **not
+subject to `CLAMP_BEATS`**, which is 0.024 and would flatten it to nothing; the
+clamp bounds humanize, and inside a fill humanize is not running. And the offset
+is **late in every case**, +0.09 down to +0.006, so it never asks the scheduler
+for a note earlier than its step and the lookahead widening in `## Scheduling`
+does not have to cover it.
 
 ## Feel
 
@@ -1099,6 +1272,27 @@ persistent rewrite of the groove.
 | Scheduler tick | 25 ms |
 | Placement tolerance | ±1 ms from intended audio-clock time |
 | Cumulative drift | 0 — a hit's time is computed from its absolute step index |
+| Start lead | 100 ms between `start()` and the first beat line |
+
+**The lookahead window covers the humanize clamp.** Because humanize can pull a
+note *earlier* than its step, the scheduler plans each beat
+`CLAMP_BEATS × secondsPerBeat` ahead of the 100 ms window; `start(t)` with a
+past `t` fires immediately. The widening and the earliest note it has to cover
+move together, so the margin it protects is the same whatever the clamp is — V6
+measured 85.0 / 84.4 / 78.3 ms at 60 / 96 / 180 BPM with a clamp of 0.065, and
+the same figures should reproduce at 0.024. What the smaller clamp changes is
+the cost of getting it wrong: without the widening the margin at 60 BPM now
+falls to 76 ms rather than to 35 ms, because a full negative clamp is 24 ms
+there and no longer 65 ms.
+
+**The start lead is still required, and it is no longer marginal.** Beat 0's line
+*is* `startTime`, so it sits inside the window on the very first tick however
+wide the window is. What keeps its step-0 note in the future is the 100 ms lead
+`useTransport` puts between `start()` and the first beat line. At 60 BPM a full
+negative clamp is 24 ms, so the lead leaves 76 ms, and it would only go negative
+below about 14 BPM. **The tempo floor is no longer held up by this.** It is held
+up by the sixteenth grid dragging, in `## Tempo`, and the start lead should stop
+being cited as a second reason.
 
 Wall-clock time and the event loop are advisory. A hit's time is
 `startTime + f(barIndex, step, tempo, swing) + humanize`, computed from the
@@ -1147,7 +1341,10 @@ has not been written yet, and a row moves up when it lands.
 | Groove library | `src/lib/grooves/` |
 | Which voice and articulation a grid symbol plays | `src/lib/pipeline/stages/baseBeat.ts` |
 | Velocity levels | `src/lib/pipeline/stages/baseBeat.ts` |
-| Bar assembly and the order the stages run in | `src/lib/pipeline/` — `run.ts`, `index.ts`, `stages/globalTime.ts`, `stages/baseBeat.ts` |
+| Velocity curves | `src/lib/pipeline/stages/velocity.ts` |
+| Humanize model and bounds | `src/lib/pipeline/stages/humanize.ts` |
+| The seeded hash every stage draws from | `src/lib/random/hash.ts` |
+| Bar assembly and the order the stages run in | `src/lib/pipeline/` — `run.ts`, `index.ts`, `stages/globalTime.ts`, `stages/baseBeat.ts`, `stages/velocity.ts`, `stages/humanize.ts` |
 | Kit, samples, relative gains | `src/lib/kit/` |
 | Scheduler and tolerances | `src/features/transport/` — `lib/scheduler.ts`, `lib/player.ts` |
 | Tempo, swing and Feel ranges on the panel | `src/features/panel/lib/ranges.ts` |
@@ -1157,8 +1354,6 @@ has not been written yet, and a row moves up when it lands.
 | :-- | :-- |
 | Tap-tempo rule | `src/lib/time/tempo.ts` |
 | Swing model | `src/lib/time/swing.ts` |
-| Velocity curves | `src/lib/pipeline/stages/velocity.ts` |
-| Humanize model and bounds | `src/lib/pipeline/stages/humanize.ts` |
 | Fill placement and shape | `src/lib/pipeline/stages/fills.ts` |
 | Feel filter and auto-feel arc | `src/lib/pipeline/stages/feel.ts` |
 | Redistribution rules | `src/lib/pipeline/stages/redistribute.ts` |
@@ -1180,6 +1375,28 @@ stated expectation a person can check.
 - **Default swing 54%.** Expectation: not obviously swung, but obviously not a
   drum machine. It carries more weight than a default normally would, because
   the knob overrides every groove.
+- **The shape of the two velocity curves.** The ranges are the binding part and
+  the shapes inside them are taste. There is no measurement of how a funk
+  drummer's level moves across a bar or across a four-bar phrase — only the two
+  ranges this document already fixed. Expectation, at 96 BPM on Straight
+  Sixteen: the bar breathes rather than crescendos, the hats lean into the
+  middle of the bar and get out of the way of the One, and you cannot tap out
+  where the peak is; across four bars, bar 4 leans into the next One without
+  sounding like a build. If the arc is inaudible, widen the ranges rather than
+  steepen the shape inside them. If the four bars read as a crescendo, flatten
+  `phraseCurve` first — it has more travel than the bar arc, and it is the one
+  that moves whole bars at a time.
+- **The humanize magnitude, σ = 0.0081 beats combined.** The clamp it hangs off
+  is derived and closed; this is the one free number, and there is no published
+  figure for a single drummer's stroke-to-stroke scatter to fix it against.
+  0.0081 is clamp / 3, which makes the clamp a ceiling rather than a shaper.
+  Expectation, at 96 BPM on Straight Sixteen: A/B against a quantized run and
+  the difference is felt and not heard — the humanized one is less rigid, and
+  you cannot point at any single note and say it was early or late. If you can,
+  it is still too much: halve it, keeping the 2.5-to-1 split. If the two runs are
+  indistinguishable, raise it toward 0.012 — but never past the clamp / 3
+  relation, because at that point the clamp starts shaping the distribution
+  instead of bounding it.
 - **The Feel table.** Expectation: at 0.5 the groove is clearly the authored
   one; at 0.75 a bass player can still hold their place; at 1.0 it is busy but
   still countable.
@@ -1201,8 +1418,9 @@ stated expectation a person can check.
 | :-- | :-- | :-- |
 | Ghost / backbeat spread | 0.30 against 1.00 | The flatter published figures reconstruct a compressed record; this app has no compressor |
 | Snare sample layers | Required | 0.30 on a single sample is a distant backbeat, not a ghost note. Without a layer the two sound levels collapse |
-| Humanize magnitude | σ = 0.026 beats | Measured from an expert funk performance, tempo-adjusted |
-| Humanize correlation | Split: 0.024 per step, 0.010 per voice | One drummer has one body. Independent draws would flam every downbeat |
+| What quantity humanize models | One drummer's stroke-to-stroke scatter, not an ensemble's | ⛔ **Supersedes σ = 0.026 beats**, which is a rhythm-section spread pooled across players. It contains the between-instrument offsets this app sets to zero, so per note it double-counts them — and it put 32% of notes at or past the 16–30 ms intent threshold. The magnitude itself is back in `## Open` |
+| Humanize ceiling | Clamp ±0.024 beats, 15.0 ms at 96 BPM | Set just inside the 16–30 ms window so no note at 96 BPM or above reads as a deliberate push or lay-back |
+| Humanize correlation | Split 2.5 to 1: 0.0075 per step, 0.0030 per voice | One drummer has one body. Independent draws separate a kick and hat on one step by 5.7 ms and smear the attack |
 | Per-voice timing bias | Zero | Measured backbeat delay in funk is minimal, imperceptible, or inverted |
 | Gain units | dB, after loudness normalization | Turns most of the question into a measurement |
 | Groove swing on Play | The knob always wins | A control must not move under the user's hand mid-performance |
@@ -1216,7 +1434,7 @@ stated expectation a person can check.
 
 - [Behind the Beat: "Funky Drummer" by James Brown — Roland](https://articles.roland.com/behind-the-beat-funky-drummer-by-james-brown/)
 - [Microtiming in Early Funk — ZGMTH](https://www.gmth.de/zeitschrift/artikel/1224.aspx) — the swing-ratio table, the secondary-Ones finding, the backbeat-delay finding, and the "Funky Drummer" fill measurement
-- [The Effect of Expert Performance Microtiming on Listeners' Experience of Groove in Swing or Funk Music — Frontiers in Psychology](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2016.01487/full) — sΔt = 0.026 beats, and the finding that groove ratings hold to +20%
+- [The Effect of Expert Performance Microtiming on Listeners' Experience of Groove in Swing or Funk Music — Frontiers in Psychology](https://www.frontiersin.org/journals/psychology/articles/10.3389/fpsyg.2016.01487/full) — sΔt = 0.026 beats **pooled across an ensemble's players**, and the finding that groove ratings hold to +20%
 - [Microtiming in Swing and Funk affects the body movement behavior of music expert listeners — PubMed](https://pubmed.ncbi.nlm.nih.gov/26347694/)
 - [David Garibaldi's 12 funk drumming tips — MusicRadar](https://www.musicradar.com/news/tower-of-power-david-garibaldi-12-tips-for-funk-drumming) — two sound levels, and "no fills, zero, none"
 - [A Drummer's Guide To Funk — Drumeo](https://www.drumeo.com/beat/a-drummers-guide-to-funk/)

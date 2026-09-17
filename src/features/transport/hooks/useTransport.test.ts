@@ -1,15 +1,27 @@
 import { act, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { CLAMP_BEATS } from '@/lib/pipeline'
+import { START_LEAD_SECONDS } from './useTransport'
 import { TICK_MS } from '../lib/scheduler'
+import type { TransportControls } from '../types'
 import { useTransport } from './useTransport'
 
+const TEMPO_FLOOR = 60
 const BEAT_96 = 60 / 96
 const BEAT_120 = 60 / 120
 
-const lastGap = (times: readonly number[]) => {
-  const rising = [...new Set(times)].sort((a, b) => a - b)
-  return rising[rising.length - 1] - rising[rising.length - 2]
+const offGrid = (times: readonly number[], secondsPerBeat: number) => {
+  const sixteenth = secondsPerBeat / 4
+  const anchor = Math.min(...times)
+  return Math.max(
+    ...times.map((time) => {
+      const steps = (time - anchor) / sixteenth
+      return Math.abs(steps - Math.round(steps)) * sixteenth
+    }),
+  )
 }
+
+const gridSlack = (secondsPerBeat: number) => 2 * CLAMP_BEATS * secondsPerBeat
 
 type Started = { time: number }
 
@@ -189,9 +201,7 @@ describe('useTransport', () => {
     expect(wave).toHaveLength(0)
   })
 
-  it('hands a tempo change to the scheduler, and it lands within a beat', async () => {
-    const { result } = await mount()
-
+  const twoTempoWaves = async (result: { current: TransportControls }) => {
     act(() => {
       result.current.togglePlaying()
     })
@@ -203,7 +213,6 @@ describe('useTransport', () => {
     act(() => {
       result.current.setTempo(120)
     })
-    expect(result.current.state.tempo).toBe(120)
 
     const at120 = waveAfter(() => {
       for (let beat = 1; beat < 9; beat += 1) {
@@ -211,8 +220,53 @@ describe('useTransport', () => {
       }
     })
 
-    expect(lastGap(at96)).toBeCloseTo(BEAT_96 / 4, 6)
-    expect(lastGap(at120)).toBeCloseTo(BEAT_120 / 4, 6)
+    return { at96, at120 }
+  }
+
+  it('hands a tempo change to the scheduler, and it lands within a beat', async () => {
+    const { result } = await mount()
+    const { at96, at120 } = await twoTempoWaves(result)
+
+    expect(result.current.state.tempo).toBe(120)
+
+    expect(offGrid(at96, BEAT_96)).toBeLessThanOrEqual(gridSlack(BEAT_96))
+    expect(offGrid(at120, BEAT_120)).toBeLessThanOrEqual(gridSlack(BEAT_120))
+  })
+
+  it('spaces notes by the new tempo and not by the old one', async () => {
+    const { result } = await mount()
+    const { at96, at120 } = await twoTempoWaves(result)
+
+    expect(offGrid(at96, BEAT_120)).toBeGreaterThan(gridSlack(BEAT_120))
+    expect(offGrid(at120, BEAT_96)).toBeGreaterThan(gridSlack(BEAT_96))
+  })
+
+  it('leaves the first note of a performance in the future at the slowest tempo', async () => {
+    const { result } = await mount()
+
+    act(() => {
+      result.current.setTempo(TEMPO_FLOOR)
+    })
+
+    const slowestBeat = 60 / TEMPO_FLOOR
+    const worstPullBack = CLAMP_BEATS * slowestBeat
+
+    expect(START_LEAD_SECONDS).toBeGreaterThan(worstPullBack)
+
+    act(() => {
+      result.current.togglePlaying()
+    })
+
+    const clockAtStart = current().currentTime
+    const wave = waveAfter(() => {
+      void advanceTo(clockAtStart)
+    })
+
+    expect(wave.length).toBeGreaterThan(0)
+    expect(Math.min(...wave) - clockAtStart).toBeGreaterThan(0)
+    expect(Math.min(...wave) - clockAtStart).toBeGreaterThanOrEqual(
+      START_LEAD_SECONDS - worstPullBack,
+    )
   })
 
   it('warns once naming the articulations that have no sample', async () => {

@@ -12,7 +12,7 @@ import type { TransportControls, TransportState } from '../types'
 const INITIAL_TEMPO = 96
 const INITIAL_SWING = 54
 const INITIAL_FEEL = 0.5
-const START_LEAD_SECONDS = 0.1
+export const START_LEAD_SECONDS = 0.1
 const SEED_RANGE = 2 ** 32
 
 const allVoicesPlaying = (): Record<Voice, boolean> =>

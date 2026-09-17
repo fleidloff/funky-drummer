@@ -1,6 +1,6 @@
 import type { Groove } from '@/lib/groove/types'
 import type { Stage } from '@/lib/pipeline'
-import { PIPELINE, runBar, variantFor } from '@/lib/pipeline'
+import { CLAMP_BEATS, PIPELINE, runBar, variantFor } from '@/lib/pipeline'
 import {
   BEATS_PER_BAR,
   STEPS_PER_BEAT,
@@ -103,7 +103,8 @@ export function createScheduler(
 
     tick: () => {
       if (!running) return
-      const horizon = deps.clock() + LOOKAHEAD_SECONDS
+      const horizon =
+        deps.clock() + LOOKAHEAD_SECONDS + CLAMP_BEATS * secondsPerBeat(tempo)
       while (beatLine(nextBeat) < horizon) {
         planBeat(nextBeat)
         nextBeat += 1
