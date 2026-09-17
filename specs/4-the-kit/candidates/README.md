@@ -4,6 +4,10 @@ Three candidate kits, one render each, same figure, loudness-matched. Play them
 back to back and pick one. Nothing here has been heard by anything; every claim
 below is either theory, a licence, or a number I measured.
 
+The four `.wav` renders are 2 MB, five times the shipped pack, and they are
+committed on purpose: they are how the pack was chosen and how the next change
+to it gets judged. Decided 2026-09-17.
+
 ## How to listen
 
 ```bash
