@@ -26,6 +26,41 @@ Where a test file goes, and the shapes to avoid, are rules —
   owns its subject is a move; rewriting it as an isolated render with hand-made
   props is a different assertion wearing the old one's name.
 
+## Content must be editable without failing a test
+
+The groove library is content, and [Project.md](concept/Project.md) says it grows
+over the life of the project from ten grooves to a hundred. So editing a groove,
+or adding one, must never turn the suite red. A test that fails because a kick
+moved from step 3 to step 4 makes every author of a groove a debugger of tests,
+and the library is the one part of this project with no ceiling.
+
+The rule this puts on a test, added by V5:
+
+- **No test may name a step, a lane, a level, or a groove's content.** Not in
+  `src/lib/grooves/`, not anywhere else. `grooves.test.ts` asserts only
+  invariants — every entry parses, ids are unique and kebab-case, one or two
+  bars, tempo and swing inside the ranges [music.md](music.md) Part 4 gives,
+  every step in range, every lane a real lane. Each one collects the offending
+  ids and asserts the list is empty, so a failure names the groove without any
+  test pinning a note.
+- **A test that needs a groove builds its own, in the test file.** `parse.ts`,
+  `baseBeat` and the scheduler all need one, and none of them imports the
+  library.
+- **The count is a minimum, never an equality.** `toBeGreaterThanOrEqual(10)`
+  survives the eleventh groove; `toBe(10)` is the same defect as naming a note.
+- **One structural test reads the folder from disk** and fails when a groove file
+  is present but not exported through `GROOVES` — the one direction invariants
+  cannot see.
+
+Proven rather than believed: V5 moved a note and changed a level in a real groove
+and ran the 334 tests under `src/lib/` green, then added an unregistered eleventh
+groove and watched exactly one test fail.
+
+The same shape applies to the pipeline's stage list, for the same reason — see
+[ADR 0007](adr/0007-the-drummer-is-a-pipeline-of-same-signature-stages.md). No
+assertion names `PIPELINE`'s length, an index, or a stage by identity, so
+appending a stage grows the test count instead of breaking the file.
+
 ## Timing is not a wall clock
 
 This app's correctness is a scheduling question, so the audio clock and the

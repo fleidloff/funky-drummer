@@ -1,16 +1,63 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { useState } from 'react'
 import { describe, expect, it, vi } from 'vitest'
+import type { Voice } from '@/lib/kit/voices'
 import { panel } from '@/lib/snippets'
 import { Panel } from './Panel'
 import { feelReadout, swingReadout, tempoReadout } from '../lib/format'
 import { feel, swing, tempo } from '../lib/ranges'
+import { voiceOrder } from '../lib/voices'
+import type { PanelControls, PanelState } from '../types'
 
 const pad = (label: string) => screen.getByRole('button', { name: label })
 const slider = (label: string) => screen.getByRole('slider', { name: label })
 
+const allPlaying = () =>
+  Object.fromEntries(voiceOrder.map((voice) => [voice, true])) as Record<Voice, boolean>
+
+const resting = (): PanelState => ({
+  playing: false,
+  autoFill: false,
+  autoFeel: false,
+  tempo: tempo.initial,
+  swing: swing.initial,
+  feel: feel.initial,
+  voices: allPlaying(),
+})
+
+const spies = (state: PanelState): PanelControls => ({
+  state,
+  togglePlaying: vi.fn(),
+  toggleAutoFill: vi.fn(),
+  toggleAutoFeel: vi.fn(),
+  setTempo: vi.fn(),
+  setSwing: vi.fn(),
+  setFeel: vi.fn(),
+  toggleVoice: vi.fn(),
+})
+
+function Controlled() {
+  const [state, setState] = useState<PanelState>(resting)
+
+  return (
+    <Panel
+      state={state}
+      togglePlaying={() => setState((it) => ({ ...it, playing: !it.playing }))}
+      toggleAutoFill={() => setState((it) => ({ ...it, autoFill: !it.autoFill }))}
+      toggleAutoFeel={() => setState((it) => ({ ...it, autoFeel: !it.autoFeel }))}
+      setTempo={(value) => setState((it) => ({ ...it, tempo: value }))}
+      setSwing={(value) => setState((it) => ({ ...it, swing: value }))}
+      setFeel={(value) => setState((it) => ({ ...it, feel: value }))}
+      toggleVoice={(voice) =>
+        setState((it) => ({ ...it, voices: { ...it.voices, [voice]: !it.voices[voice] } }))
+      }
+    />
+  )
+}
+
 describe('the pads', () => {
   it('starts with all eight instruments playing', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     const labels = [
       panel.kick,
@@ -28,7 +75,7 @@ describe('the pads', () => {
   })
 
   it('mutes the one that is tapped and leaves the rest playing', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.click(pad(panel.hiHat))
 
@@ -37,7 +84,7 @@ describe('the pads', () => {
   })
 
   it('brings a muted instrument back on a second tap', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.click(pad(panel.crash))
     fireEvent.click(pad(panel.crash))
@@ -48,14 +95,14 @@ describe('the pads', () => {
 
 describe('the transport', () => {
   it('reads as the starting label until it is pressed', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.play)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: panel.stop })).not.toBeInTheDocument()
   })
 
   it('swaps its label once it is running', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.click(pad(panel.play))
 
@@ -63,7 +110,7 @@ describe('the transport', () => {
   })
 
   it('swaps back on a second press', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.click(pad(panel.play))
     fireEvent.click(pad(panel.stop))
@@ -72,7 +119,7 @@ describe('the transport', () => {
   })
 
   it('latches auto fill and auto feel independently', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.autoFill)).toHaveAttribute('aria-pressed', 'false')
     expect(pad(panel.autoFeel)).toHaveAttribute('aria-pressed', 'false')
@@ -89,7 +136,7 @@ describe('the transport', () => {
   })
 
   it('reports itself unpressed while stopped, though its lamp stays on', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.play)).toHaveAttribute('aria-pressed', 'false')
     expect(pad(panel.play)).toHaveClass('lamp-green')
@@ -100,7 +147,7 @@ describe('the transport', () => {
   })
 
   it('pulses while it is running and sits steady while it is not', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.play)).not.toHaveClass('lamp-pulsing')
 
@@ -110,13 +157,13 @@ describe('the transport', () => {
   })
 
   it('gives tap tempo no latched state, because it latches no value', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.tapTempo)).not.toHaveAttribute('aria-pressed')
   })
 
   it('flashes tap tempo while the finger is down', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(pad(panel.tapTempo)).not.toHaveClass('brightness-125')
 
@@ -132,7 +179,7 @@ describe('the transport', () => {
 
 describe('the continuous controls', () => {
   it('rests where the music document puts them', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(slider(panel.swing)).toHaveAttribute('aria-valuenow', String(swing.initial))
     expect(slider(panel.tempo)).toHaveAttribute('aria-valuenow', String(tempo.initial))
@@ -140,7 +187,7 @@ describe('the continuous controls', () => {
   })
 
   it('reads out the value each one is resting on', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(slider(panel.swing)).toHaveAttribute('aria-valuetext', swingReadout(swing.initial))
     expect(slider(panel.tempo)).toHaveAttribute('aria-valuetext', tempoReadout(tempo.initial))
@@ -148,14 +195,14 @@ describe('the continuous controls', () => {
   })
 
   it('sweeps the range the music document allows', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(slider(panel.tempo)).toHaveAttribute('aria-valuemin', String(tempo.min))
     expect(slider(panel.tempo)).toHaveAttribute('aria-valuemax', String(tempo.max))
   })
 
   it('counts one step up on an arrow key', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.keyDown(slider(panel.tempo), { key: 'ArrowUp' })
 
@@ -166,7 +213,7 @@ describe('the continuous controls', () => {
   })
 
   it('counts one step down on an arrow key', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.keyDown(slider(panel.tempo), { key: 'ArrowDown' })
 
@@ -177,7 +224,7 @@ describe('the continuous controls', () => {
   })
 
   it('stops at the top of its range', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     fireEvent.keyDown(slider(panel.feel), { key: 'End' })
     fireEvent.keyDown(slider(panel.feel), { key: 'ArrowUp' })
@@ -188,7 +235,7 @@ describe('the continuous controls', () => {
 
 describe('the panel as a whole', () => {
   it('offers the eight pads and four buttons the mockup draws, and no other control', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     expect(screen.getAllByRole('button')).toHaveLength(12)
     expect(screen.getAllByRole('slider')).toHaveLength(3)
@@ -196,7 +243,7 @@ describe('the panel as a whole', () => {
   })
 
   it('puts the steering above the playing surface, in one document order', () => {
-    const { container } = render(<Panel />)
+    const { container } = render(<Controlled />)
 
     const named = [...container.querySelectorAll('button, [role="slider"]')].map(
       (control) => control.getAttribute('aria-label') ?? control.textContent,
@@ -229,7 +276,7 @@ describe('the panel as a whole', () => {
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
       }))
-      const { container, unmount } = render(<Panel />)
+      const { container, unmount } = render(<Controlled />)
       // useId numbers each render root, so the SVG gradient names differ
       // between two renders for reasons that have nothing to do with the scheme.
       const html = container.innerHTML
@@ -247,12 +294,35 @@ describe('the panel as a whole', () => {
   })
 
   it('names every control for a screen reader', () => {
-    render(<Panel />)
+    render(<Controlled />)
 
     const unnamed = [...screen.getAllByRole('button'), ...screen.getAllByRole('slider')].filter(
       (control) => (control.getAttribute('aria-label') ?? control.textContent ?? '') === '',
     )
 
     expect(unnamed).toEqual([])
+  })
+})
+
+describe('the panel is driven by its props', () => {
+  it('shows the state it is handed, with nothing tapped', () => {
+    render(<Panel {...spies({ ...resting(), playing: true, voices: { ...allPlaying(), hihat: false } })} />)
+
+    expect(pad(panel.stop)).toHaveAttribute('aria-pressed', 'true')
+    expect(pad(panel.hiHat)).toHaveAttribute('aria-pressed', 'false')
+    expect(pad(panel.kick)).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('reports a tap to the callback it was given and changes nothing itself', () => {
+    const controls = spies(resting())
+    render(<Panel {...controls} />)
+
+    fireEvent.click(pad(panel.hiHat))
+    fireEvent.click(pad(panel.play))
+
+    expect(controls.toggleVoice).toHaveBeenCalledWith('hihat')
+    expect(controls.togglePlaying).toHaveBeenCalledTimes(1)
+    expect(pad(panel.hiHat)).toHaveAttribute('aria-pressed', 'true')
+    expect(pad(panel.play)).toBeInTheDocument()
   })
 })

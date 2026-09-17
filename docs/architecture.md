@@ -67,18 +67,40 @@ The graph above is between directories. Inside a feature folder there is a
 second graph the directories do not show: which of the slice's concerns may
 reach which.
 
-**This section is empty, and that is correct for now.** A slice with two or
-three concern folders does not need a map; a reader holds it in their head.
-Draw
-one when a slice has grown enough concerns that the reaching between them has
+**No map is drawn yet, and that is correct for now.** A slice with two or three
+concern folders does not need one; a reader holds it in their head. Draw one
+when a slice has grown enough concerns that the reaching between them has
 stopped being obvious — and until then, importing a sibling concern folder
 directly is correct rather than a violation waiting for a rule.
 
-V3 added the first slice, `src/features/panel/`, and it has exactly three
-concern folders: `components/` — grouped into the two screen regions the layout
-names, `steering/` and `surface/` — plus `hooks/` and `lib/`, with `types.ts`
-and `index.ts` at the root. Its `lib/` modules are imported directly, because no
-folder in it has earned a door yet.
+There are two slices, and no folder in either has earned a door.
+
+`src/features/panel/` is UI and nothing else. `components/` is grouped into the
+two screen regions the layout names, `steering/` and `surface/`, with
+`components/Panel.tsx` above both; `lib/` holds `format.ts`, `ranges.ts` and
+`voices.ts`; `types.ts` and `index.ts` sit at the root, and there is no
+`hooks/` and no `state/`, because `Panel.tsx` takes `PanelControls` as props and
+holds nothing. The components reach `lib/` by relative path, which is what an
+absent door means. Zone 6 would stop `lib/` reaching back.
+
+`src/features/transport/` is the impure half. `lib/player.ts` owns the
+`AudioContext` and the sample cache, `lib/scheduler.ts` owns the lookahead loop
+and its bar planning, and `hooks/useTransport.ts` owns the play state, builds
+the two `lib/` objects and drives the loop with an interval. The arithmetic both
+`lib/` modules need is pure and sits outside the slice, in `src/lib/time/` and
+`src/lib/pipeline/`. The one arrow a rule holds is zone 6: `lib/` may not import
+the hook. That `useTransport.ts` is the only file in the slice constructing an
+`AudioContext` or a timer is **review only**.
+
+**The two slices do not know about each other, and the route is what joins
+them.** `src/app/page.tsx` is the only file that names both: it calls
+`useTransport()` and spreads the result into `Panel`. Zone 3 makes a direct
+import between them an error. What zone 3 cannot check is that the two shapes
+agree — `PanelControls` in `src/features/panel/types.ts` and
+`TransportControls` in `src/features/transport/types.ts` are declared
+separately and match structurally, never by import. `page.tsx` is the single
+place they meet, so `tsc` turns a drift into a build error. Nothing else holds
+it: delete that one line and the two types are free to diverge unnoticed.
 
 When it is worth writing, this is the section it goes in, and three things have
 to be true of it:

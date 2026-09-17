@@ -1,6 +1,6 @@
 import type { Voice } from '@/lib/kit/voices'
 
-export type PanelState = {
+export type TransportState = {
   playing: boolean
   autoFill: boolean
   autoFeel: boolean
@@ -10,8 +10,8 @@ export type PanelState = {
   voices: Record<Voice, boolean>
 }
 
-export type PanelControls = {
-  state: PanelState
+export type TransportControls = {
+  state: TransportState
   togglePlaying: () => void
   toggleAutoFill: () => void
   toggleAutoFeel: () => void

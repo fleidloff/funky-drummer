@@ -1,7 +1,7 @@
 # V5. The first beat
 
 Started 2026-09-17 · `/brainstorm`
-**Phase:** ready to build — `/implement 5`
+**Phase:** built — shipped 2026-09-17
 
 ## What
 
@@ -22,12 +22,16 @@ Started 2026-09-17 · `/brainstorm`
 ## Done when
 
 * **Press Play and Straight Sixteen loops through the real kit**, in time, at
-  the tempo the knob says, and keeps looping until Stop. *Needs an ear.*
+  the tempo the knob says, and keeps looping until Stop. *Needed an ear —
+  **settled by Fred on 2026-09-17**: "it sounds good". The kit, the groove and
+  the timing are accepted. The one thing he asked to change is latency, not
+  sound: tempo and Stop take a whole bar to land, and he wants a beat. Carried
+  as its own change.*
 * **Time is computed, never accumulated.** A hit's time comes from its absolute
   step index, and placement is within ±1 ms of the intended audio-clock time,
   measured against an injected clock over enough bars to expose drift.
-* **A tempo change takes effect at the next bar line** and moves no hit that is
-  already scheduled.
+* **A tempo change takes effect at the next beat line** and moves no hit that is
+  already scheduled. **Stop lands inside a beat too.**
 * **All ten grids of `docs/music.md` Part 2 parse, and the library's tests
   assert invariants only** — so changing a groove or adding one never fails a
   test. A malformed grid fails loudly.
@@ -88,6 +92,22 @@ Started 2026-09-17 · `/brainstorm`
   than three. Waived: the requirements are settled and the work is simply large,
   which is the case `/brainstorm` §7 says not to split. The two epics are the
   concession.
+
+* **Tempo and Stop land on the next beat, not the next bar** — Fred, on hearing
+  it: *"can we have tempo and stop take effect the next beat rather than the next
+  bar?"*. The build committed a whole bar to the audio clock the moment its bar
+  line entered the lookahead window, so pressing Stop could leave 2.5 s of
+  drumming sounding at 96 BPM and a tempo change could take two bar lines. The
+  scheduler now commits **one beat at a time**. One mechanism fixes both.
+* **Stop lets the committed beat finish and lets ringing notes ring**, rather
+  than cutting every scheduled source dead on the beat line. Fred's choice: an
+  open hi-hat or a crash decaying is what a drummer stopping mid-bar sounds
+  like, and cutting it is abrupt.
+* **The pipeline still computes a bar; only the commitment is a beat.** Velocity
+  curves and fills are bar-shaped, so the unit of computation stays a bar.
+  `runBar` is pure, so recomputing a bar once per beat returns the same notes,
+  and `BarContext` anchors on an absolute beat (`startBeat`) so a tempo change
+  can re-anchor mid-bar. No stage sees a difference.
 
 ## Open
 

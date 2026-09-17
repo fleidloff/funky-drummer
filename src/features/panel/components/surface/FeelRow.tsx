@@ -7,7 +7,7 @@ import { EtchedLabel } from '@/components/typography/EtchedLabel'
 import { panel } from '@/lib/snippets'
 import { feelReadout } from '../../lib/format'
 import { feel } from '../../lib/ranges'
-import type { PanelControls } from '../../hooks/usePanelState'
+import type { PanelControls } from '../../types'
 
 export function FeelRow({ state, setFeel, toggleAutoFeel }: PanelControls) {
   return (

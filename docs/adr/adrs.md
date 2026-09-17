@@ -17,3 +17,5 @@ record is edited to ⛔ **Superseded by**. Nothing here is deleted.
 | [0004](0004-the-look-is-a-named-surface-vocabulary.md) | The look is a named surface vocabulary, and no component names a colour | ✅ Accepted | 2026-09-16 |
 | [0005](0005-samples-are-normalized-to-onset-window-rms.md) | Samples are normalized to onset-window RMS, not integrated loudness | ✅ Accepted | 2026-09-16 |
 | [0006](0006-the-kit-ships-as-ogg-vorbis-only.md) | The kit ships as Ogg Vorbis only | ✅ Accepted | 2026-09-16 |
+| [0007](0007-the-drummer-is-a-pipeline-of-same-signature-stages.md) | The drummer is a pipeline of same-signature stages | ✅ Accepted | 2026-09-17 |
+| [0008](0008-the-drummer-is-domain-the-transport-is-a-slice.md) | The drummer is domain, the transport is a slice, the route joins them | ✅ Accepted | 2026-09-17 |

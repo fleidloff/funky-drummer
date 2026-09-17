@@ -3,7 +3,7 @@ import { MomentaryButton } from '@/components/controls/MomentaryButton'
 import { Fill } from '@/components/layout/Fill'
 import { Row } from '@/components/layout/Row'
 import { panel } from '@/lib/snippets'
-import type { PanelControls } from '../../hooks/usePanelState'
+import type { PanelControls } from '../../types'
 
 export function Transport({ state, togglePlaying, toggleAutoFill }: PanelControls) {
   return (

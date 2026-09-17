@@ -9,8 +9,9 @@ The document has four parts.
 1. **What funk drumming is** — the reference. Where it comes from, what is
    measured and what is folklore.
 2. **The reference grooves** — the library's starting content, on a 16-step grid.
-3. **The kit** — the eight instruments, what each one does in funk, and what
-   happens to its part when it is muted.
+3. **The kit** — the eight instruments, what each one does in funk, what
+   happens to its part when it is muted, and which articulation each grid symbol
+   plays.
 4. **The model** — the app's actual numbers: tempo, swing, velocity, humanize,
    Feel, fills, scheduling.
 
@@ -554,6 +555,210 @@ control cannot make busier.
 **Muted.** The accent moves to the ride bell, otherwise to an open hi-hat,
 otherwise to a snare rimshot.
 
+## What a grid symbol plays
+
+ADR 0001's grid carries a lane and a level. The kit carries seventeen
+articulations. This section is the map between the two, and it is the whole of
+what the `baseBeat` stage decides.
+
+Three rules generate the table below, which is only their consequence.
+
+1. **The level picks the velocity and nothing else.** Part 4 owns those four
+   numbers and they are not repeated here.
+2. **`#` and `X` are the same stroke.** ADR 0001 calls `#` an *anchored accent*.
+   It differs from `X` in what the drummer is allowed to do with the note, not
+   in how the note sounds. So anchor and accent always choose the same
+   articulation, and only the velocity separates them.
+3. **A flag beats a level.** `O` and `B` name an articulation outright, so a note
+   carrying `open` plays `hihat.open` and a note carrying `bell` plays
+   `ride.bell`, whatever level it carries. The parser writes both only at accent
+   level today. The rule is stated this way so that a later notation for a quiet
+   open hat needs no new row.
+
+### The table
+
+**It is total by design.** The parser permits every level on every lane, so every
+cell has an answer even where the combination is musically unlikely. A ghost
+crash is a very quiet crash, not an error, and the stage never throws.
+
+| Lane | Level | Voice | Articulation |
+| :-- | :-- | :-- | :-- |
+| `kick` | anchor, accent | `kick` | `kick.hard` |
+| `kick` | normal, ghost | `kick` | `kick.soft` |
+| `snare` | anchor, accent | `snare` | `snare.backbeat` |
+| `snare` | normal | `snare` | `snare.normal` |
+| `snare` | ghost | `snare` | `snare.ghost` |
+| `hihat` | anchor, accent | `hihat` | `hihat.accent` |
+| `hihat` | normal, ghost | `hihat` | `hihat.closed` |
+| `ride` | all four | `ride` | `ride.bow` |
+| `cowbell` | all four | `cowbell` | `cowbell.hit` |
+| `shaker` | all four | `shaker` | `shaker.hit` |
+| `tom1` | all four | `toms` | `toms.rack` |
+| `tom2` | all four | `toms` | `toms.floor` |
+| `crash` | all four | `crash` | `crash.hit` |
+
+Two flags override the lane's row and leave the velocity alone.
+
+| Flag | Written as | Voice | Articulation |
+| :-- | :-- | :-- | :-- |
+| `open` | `O` on `hihat` | `hihat` | `hihat.open` |
+| `bell` | `B` on `ride` | `ride` | `ride.bell` |
+
+Two articulations are not reachable from any grid: `snare.crossStick` and
+`hihat.pedal`. Both are accounted for below.
+
+A note's velocity is the Part 4 level value and nothing else. **The per-voice
+gain in *Relative gains* is applied by the player, not by this map**, so it is
+never multiplied in twice.
+
+### The kick line falls between accent and normal
+
+The two kick files are MIDI velocity layers 25 and 19 of one drum, and
+onset-RMS normalization has removed the level difference between them, so what
+survives is the amount of beater on the front of the note.
+
+That is the right thing to key on. A drummer's marked kicks — beat 1 and the
+kicks the groove leans on — are full strokes from the leg. The rest of a funk
+kick part is the second note of a double and the push onto the "&", which the
+foot plays off the rebound with less force and less beater. So `#` and `X` take
+`kick.hard`, `x` and `o` take `kick.soft`, and the timbre moves in the same
+direction as the velocity, which is what a real drum does.
+
+A ghost kick is legal notation and no library groove writes one. It takes
+`kick.soft` because there is no third file.
+
+### An accented snare is a backbeat played softer
+
+Part 3 says the snare has three levels — backbeat, normal, ghost — and the grid
+has four. The collapse happens at the top, and `X` joins `#` on
+`snare.backbeat`.
+
+The reason is the two sound levels. The pattern a listener hears is the pattern
+of the loud notes, so every note in that pattern has to read as the same stroke.
+Cissy Strut's accent on the "a" of 2 and Second Line's accents on the "&"s of 3
+and 4 are loud notes inside the figure, not lighter versions of it. Sending them
+to `snare.normal` would drop them out of the accent pattern in timbre while
+leaving them in it in volume, which is the confusion the three-layer scheme
+exists to prevent.
+
+`snare.normal` is therefore the sound of an unmarked `x` snare only — the fill
+note between the backbeats that is louder than a ghost and quieter than the
+figure.
+
+### Cross-stick is not reachable from the grid
+
+ADR 0001 has no glyph for it, and adding one is a change to that record rather
+than a row in this table. Its job is the count-in click, which is a note the
+transport fires and not a note any groove authors. Until a count-in exists,
+`snare.crossStick` is in the pack and unplayed, and that is correct.
+
+### The open hat is not closed by this map
+
+Part 3 says an open note is always closed on the next grid step. That promise has
+two halves and they are kept in different places.
+
+**The closing note is the groove author's.** Where a figure needs an audible
+close, the grid writes a hi-hat note on the step after the `O` — Funky Drummer
+does exactly that on the "&" of 2 and the "&" of 4. This map does not invent
+that note, because a note with no grid note behind it is material the drummer
+adds, and adding material is a later stage's job.
+
+**Stopping the ring is the transport's.** `hihat.open` is trimmed to 300 ms and
+nothing chokes it, so the open sample plays through whatever follows it. Four On
+The Floor Funk opens on every upbeat and writes no note on the step after, so
+notation alone cannot keep the promise there — a choke group is required, not
+optional. Until it is built the app does leave the hats open across a beat, and
+the sentence in *Hi-hat* above describes the target rather than the behaviour.
+
+`hihat.pedal` is unreachable for the same reason as the cross-stick: no glyph
+selects it. The foot chick Part 3 describes arrives with redistribution, when the
+ride takes over the pattern.
+
+### The toms are flat, low lane to low drum
+
+`tom1` plays `toms.rack` and `tom2` plays `toms.floor`, at every level.
+
+Kit numbering runs high to low, so a descending fill written down the lanes reads
+as written. The redistribution rules settle it independently: *Kick* says the
+floor tom takes beat 1 when the kick is muted, so the floor tom has to be the
+lower of the two lanes.
+
+### The round robin
+
+Four articulations ship with more than one file. `snare.ghost`, `hihat.closed`
+and `shaker.hit` have three; `snare.crossStick` has two. The player is given a
+`variant` integer and plays `files[variant % files.length]`.
+
+**The variant is a pure function of the note's position and the performance
+seed.**
+
+```
+variant = mix(seed, barIndex, step, lane)
+```
+
+`lane` is its index in `LANES`, so the hi-hat and the snare on the same step draw
+independently and `tom1` and `tom2` do not move together. `mix` is any fixed
+integer hash — the same four inputs give the same integer, always, with no clock
+and no `Math.random` in it. Which hash is an implementation choice and not a
+musical one.
+
+**This is the key humanize already uses, and deliberately so.** *Determinism*
+requires every varying decision to be a pure function of its inputs, and
+*Humanize displaces, it never drifts* states that key as
+`(seed, barIndex, step, voice)`. A round-robin pick is the same kind of decision
+— a per-note draw that must not repeat and must reproduce — so it takes the same
+key rather than a second one.
+
+**A cycling counter is wrong and is rejected.** A counter that advances per note
+and carries across bars makes a note's file depend on how many notes were played
+before it. Bar 40 would then play differently depending on when Play was pressed,
+and any change that alters the note count in bar 3 — a Feel move, a mute — would
+shift every file choice after it. Keying on position gives reproducibility for
+free: bar 40 step 9 draws the same file whatever happened in bar 3.
+
+**Keying on the step alone is wrong too**, and for a nearer reason. `step % 3`
+is fixed for a given step, so a ghost note that always falls on the "a" of 3
+would play the same file in every bar of the performance — the machine-gun
+repeat the round robin exists to break.
+
+**The seed belongs in the key.** Without it, two performances of the same groove
+would play an identical ghost sequence forever, and the seed is drawn fresh on
+Play precisely so that they do not.
+
+**Every note gets a variant, including the thirteen single-file articulations.**
+`variant % 1` is always 0, so those ignore it, and adding a second file to the
+manifest changes what is heard without changing any code.
+
+This rule picks well from what the pack has; it cannot improve it.
+[docs/samples.md](samples.md) records that the three `snare.ghost` files
+correlate at r ≈ 0.90, so the ghost round robin takes the edge off a repeat
+rather than hiding it. That is a pack problem and not a selection one.
+
+**The count-in is outside this rule.** Whatever stage plays the cross-stick
+click has no bar index to key on and decides its own variant when it exists.
+
+### What the map does not decide
+
+Everything here reads what an author wrote. Each of these changes it, and each
+belongs to a stage of its own — the *Where to change what* table names the file.
+
+- **Velocity curves.** The per-bar and per-phrase arcs multiply the level value
+  after this map has produced it.
+- **Swing and humanize.** Both move a note in time and neither is a property of
+  the symbol.
+- **Feel.** Thinning, added ghost notes, kick doubles and displaced backbeats all
+  operate on the notes this map produced. At any Feel value the map itself is
+  unchanged.
+- **Fills, and the crash that follows one.** The `crash` lane has a row because
+  the grid could carry it. No library groove authors one and this map never
+  invents one.
+- **Redistribution.** A muted voice's part is re-assigned per bar from the mute
+  set, which this map does not read.
+- **The secondary One.** `secondaryOne` is metadata. Emphasising that downbeat is
+  a velocity decision, not an articulation one.
+- **Choke, voice stealing and headroom.** All three are the player's, below the
+  note.
+
 ## Relative gains
 
 Fixed. These are the mix, and there is no user control over them.
@@ -640,8 +845,23 @@ to move with it.
 | Funk window | 85–115 BPM |
 | Tap tempo | median of the last 4 intervals; a gap over 2 s starts a new set |
 
-A tempo change takes effect at the next bar line, not immediately. Changing it
-mid-bar would move hits that are already scheduled.
+A tempo change takes effect at **the next beat line**, not immediately. The rule
+it protects is that a hit already handed to the audio clock never moves; the
+granularity is how long you wait for it.
+
+V5 first committed a whole bar at a time, so a tempo change could take up to two
+bar lines to be heard and Stop left 2.5 s of drumming sounding at 96 BPM. Fred
+heard it and asked for a beat. The scheduler now commits **one beat at a time**,
+so at most a beat plus the 100 ms lookahead is in flight, and both the tempo knob
+and Stop land inside a beat.
+
+**Stop lets the committed beat finish and lets ringing notes ring.** It stops
+scheduling rather than cutting the sound, so an open hi-hat or a crash decays
+instead of being chopped — which is what a drummer stopping mid-bar sounds like.
+
+The beat is the floor, not a target to lower further. Below it the lookahead
+window stops being a safety margin against a late tick, which is the defect
+`## Scheduling` separates from drift.
 
 **The knob wins here too.** Every groove declares its own `tempo` per ADR 0001
 and the transport ignores it, for the same reason it ignores the groove's swing:
@@ -678,6 +898,15 @@ per-voice swing would be a different feature and is not this one.
 **The knob always wins.** Every groove declares its own `swing` per ADR 0001,
 and the transport ignores it: it records what the record does, and nothing
 reads it at runtime. Drawing a groove never moves a control the user has set.
+
+**None of this section is built yet, and the app plays dead straight.** V5 built
+`globalTime` and `baseBeat` and left swing to a later stage, so the knob moves a
+number nothing reads and every groove sounds at 50% however it is authored.
+Cissy Strut is a 57% groove and currently is not one. `stepBeats` in
+`src/lib/time/grid.ts` already takes the swing percentage and discards it, so the
+stage that lands fills in a value rather than changing a signature. Swing is
+stated as a **percentage** everywhere — 50 to 66.7, the same unit a groove
+declares — and `STRAIGHT_PERCENT` is 50, not 0.5.
 
 The cost is real and worth naming. Cissy Strut is a 57% groove, and at the
 default 54% it will be a little squarer than the record. The alternative was a
@@ -908,27 +1137,35 @@ re-release, not a refactor, and proposing one is a decision to escalate.
 
 ## Where to change what
 
-**No source exists yet.** This table is the intended home for each decision, so
-that the first implementation puts it in the right place and this document has
-somewhere to point.
+Every home in the first table is a file in the tree. The second table is what
+has not been written yet, and a row moves up when it lands.
 
-| Decision | Planned home |
+| Decision | Home |
 | :-- | :-- |
-| Tempo range, default, tap-tempo rule | `src/lib/time/tempo.ts` |
-| Swing model and range | `src/lib/time/swing.ts` |
 | Grid, step-to-time conversion | `src/lib/time/grid.ts` |
-| Velocity levels and curves | `src/lib/groove/velocity.ts` |
-| Humanize model and bounds | `src/lib/groove/humanize.ts` |
-| Fill placement and shape | `src/lib/groove/fills.ts` |
-| Feel filter and auto-feel arc | `src/lib/groove/feel.ts` |
-| Redistribution rules | `src/lib/groove/redistribute.ts` |
 | Groove grid parser and validator | `src/lib/groove/parse.ts` |
-| Groove library | `src/features/groove-library/` |
+| Groove library | `src/lib/grooves/` |
+| Which voice and articulation a grid symbol plays | `src/lib/pipeline/stages/baseBeat.ts` |
+| Velocity levels | `src/lib/pipeline/stages/baseBeat.ts` |
+| Bar assembly and the order the stages run in | `src/lib/pipeline/` — `run.ts`, `index.ts`, `stages/globalTime.ts`, `stages/baseBeat.ts` |
 | Kit, samples, relative gains | `src/lib/kit/` |
-| Scheduler and tolerances | `src/features/transport/` |
+| Scheduler and tolerances | `src/features/transport/` — `lib/scheduler.ts`, `lib/player.ts` |
+| Tempo, swing and Feel ranges on the panel | `src/features/panel/lib/ranges.ts` |
+| Starting tempo, swing and Feel | `src/features/transport/hooks/useTransport.ts` |
 
-When a file lands, update this table in the same change. A row that names a file
-that does not exist is worse than no row.
+| Not built yet | Where it will go |
+| :-- | :-- |
+| Tap-tempo rule | `src/lib/time/tempo.ts` |
+| Swing model | `src/lib/time/swing.ts` |
+| Velocity curves | `src/lib/pipeline/stages/velocity.ts` |
+| Humanize model and bounds | `src/lib/pipeline/stages/humanize.ts` |
+| Fill placement and shape | `src/lib/pipeline/stages/fills.ts` |
+| Feel filter and auto-feel arc | `src/lib/pipeline/stages/feel.ts` |
+| Redistribution rules | `src/lib/pipeline/stages/redistribute.ts` |
+
+Everything in the second table is a pipeline stage, because each one reads a bar
+and returns a bar. When a file lands, move its row up in the same change. A row
+in the first table that names a file that does not exist is worse than no row.
 
 ## Open
 
@@ -946,6 +1183,17 @@ stated expectation a person can check.
 - **The Feel table.** Expectation: at 0.5 the groove is clearly the authored
   one; at 0.75 a bass player can still hold their place; at 1.0 it is busy but
   still countable.
+- **The kick's hard/soft line.** Placed between accent and normal, so the two
+  marked levels get the harder beater and the doubles and pushes get the softer
+  one. Expectation: a kick double reads as one loud note and one quieter one,
+  and beat 1 is the kick with the most beater on the front of it. Both files are
+  velocity layers of one drum and normalization has flattened their level, so if
+  they prove indistinguishable the line costs nothing and can move.
+- **An accented snare plays `snare.backbeat`.** Expectation: Cissy Strut's
+  accent on the "a" of 2 belongs to the same accent pattern as its beat-4
+  backbeats and sounds like the same stroke, a little softer. If it instead
+  reads as a second backbeat and flattens the figure, the alternative is
+  `snare.normal` at the same velocity.
 
 ### Closed
 
@@ -959,6 +1207,8 @@ stated expectation a person can check.
 | Gain units | dB, after loudness normalization | Turns most of the question into a measurement |
 | Groove swing on Play | The knob always wins | A control must not move under the user's hand mid-performance |
 | Feel zero point | The authored groove sits at 0.5 | Equal travel both ways, and symmetric room for auto-feel |
+| Round-robin file choice | A pure function of `(seed, barIndex, step, lane)` | A counter carries state across bars, so the same bar would play differently depending on what came before it |
+| `#` against `X` | The same articulation, different velocity | ADR 0001 calls `#` an anchored accent: it constrains the drummer, it does not change the sound |
 
 ---
 

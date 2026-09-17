@@ -5,7 +5,7 @@ import { EtchedLabel } from '@/components/typography/EtchedLabel'
 import { panel } from '@/lib/snippets'
 import { scaleMark, swingReadout, tempoReadout } from '../../lib/format'
 import { swing, tempo } from '../../lib/ranges'
-import type { PanelControls } from '../../hooks/usePanelState'
+import type { PanelControls } from '../../types'
 
 export function Knobs({ state, setSwing, setTempo }: PanelControls) {
   return (

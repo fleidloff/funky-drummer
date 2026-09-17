@@ -1,23 +1,12 @@
-import type { VoiceId } from '../types'
+import type { Voice } from '@/lib/kit/voices'
 
-export const voiceOrder: readonly VoiceId[] = [
+export const voiceOrder: readonly Voice[] = [
   'kick',
   'snare',
-  'hiHat',
+  'hihat',
   'ride',
   'cowbell',
   'shaker',
   'toms',
   'crash',
 ]
-
-export const allPlaying: Record<VoiceId, boolean> = {
-  kick: true,
-  snare: true,
-  hiHat: true,
-  ride: true,
-  cowbell: true,
-  shaker: true,
-  toms: true,
-  crash: true,
-}

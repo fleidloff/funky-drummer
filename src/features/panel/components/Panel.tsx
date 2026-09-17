@@ -5,16 +5,14 @@ import { PageFrame } from '@/components/layout/PageFrame'
 import { Split } from '@/components/layout/Split'
 import { Stack } from '@/components/layout/Stack'
 import { MetalSurface } from '@/components/surfaces/MetalSurface'
-import { usePanelState } from '../hooks/usePanelState'
+import type { PanelControls } from '../types'
 import { Knobs } from './steering/Knobs'
 import { Nameplate } from './steering/Nameplate'
 import { Transport } from './steering/Transport'
 import { FeelRow } from './surface/FeelRow'
 import { PadGrid } from './surface/PadGrid'
 
-export function Panel() {
-  const controls = usePanelState()
-
+export function Panel(controls: PanelControls) {
   return (
     <PageFrame>
       <Inset pad={3}>

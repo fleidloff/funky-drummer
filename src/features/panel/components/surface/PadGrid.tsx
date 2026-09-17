@@ -2,15 +2,15 @@ import { Pad } from '@/components/controls/Pad'
 import { Grid } from '@/components/layout/Grid'
 import { Inset } from '@/components/layout/Inset'
 import { Well } from '@/components/surfaces/Well'
+import type { Voice } from '@/lib/kit/voices'
 import { panel } from '@/lib/snippets'
 import { voiceOrder } from '../../lib/voices'
-import type { PanelControls } from '../../hooks/usePanelState'
-import type { VoiceId } from '../../types'
+import type { PanelControls } from '../../types'
 
-const voiceLabel: Record<VoiceId, string> = {
+const voiceLabel: Record<Voice, string> = {
   kick: panel.kick,
   snare: panel.snare,
-  hiHat: panel.hiHat,
+  hihat: panel.hiHat,
   ride: panel.ride,
   cowbell: panel.cowbell,
   shaker: panel.shaker,
