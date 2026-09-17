@@ -27,6 +27,14 @@ in either table.
 
 ---
 
+## In progress
+
+| N | Title | Specced | What it is |
+| :-- | :-- | :-- | :-- |
+| [5](5-the-first-beat/) | The first beat | 2026-09-17 | `globalTime` and `baseBeat` as the first two stages of an open-ended pipeline, plus everything needed to hear them: ADR 0001's grid parser, the ten grooves of `docs/music.md` Part 2 as data, a sample player and a scheduler. Play/Stop and Tempo go live; Straight Sixteen loops. Two epics. |
+
+---
+
 ## Candidates
 
 
